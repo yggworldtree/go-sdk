@@ -12,7 +12,6 @@ import (
 	"github.com/yggworldtree/go-core/common"
 	"github.com/yggworldtree/go-core/messages"
 	"github.com/yggworldtree/go-core/utils"
-	"github.com/yggworldtree/go-sdk/ywtree/cloud"
 	"net"
 	"runtime/debug"
 	"sync"
@@ -20,7 +19,7 @@ import (
 )
 
 type Engine struct {
-	id   string
+	info hbtpBean.ClientRegRes
 	cfg  *Config
 	ctx  context.Context
 	cncl context.CancelFunc
@@ -114,9 +113,15 @@ func (c *Engine) close() {
 		c.regd = false
 	}
 }
+func (c *Engine) subs() {
+	code, bts, err := c.DoHbtpString("SubTopic", &hbtpBean.ClientSubTopic{
+		Topics: []string{"haha", "123123123"},
+	})
+	logrus.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
+}
 func (c *Engine) reg() error {
 	c.regd = false
-	req, err := cloud.NewReq(c.cfg.Host, "Reg", time.Second*5)
+	req, err := c.NewHbtpReq("Reg", time.Second*5)
 	if err != nil {
 		return err
 	}
@@ -131,17 +136,20 @@ func (c *Engine) reg() error {
 	if req.ResCode() != hbtp.ResStatusOk {
 		return fmt.Errorf("res code(%d) not ok:%s", req.ResCode(), string(req.ResBodyBytes()))
 	}
-	ids := string(req.ResBodyBytes())
-	if ids == "" {
+	info := &hbtpBean.ClientRegRes{}
+	err = req.ResBodyJson(info)
+	if err != nil {
+		return err
+	}
+	if info.Id == "" || len(info.Token) < 32 {
 		return fmt.Errorf("id code(%d) err:%s", req.ResCode(), string(req.ResBodyBytes()))
 	}
-	c.id = ids
-	//c.sndch = make(chan *clientBean.MessageBox,100)
-	//c.rcvch = make(chan *clientBean.MessageBox,100)
+	c.info = *info
 	c.conn = req.Conn(true)
 	c.htms = time.Now()
 	c.htmr = time.Now()
 	c.regd = true
+	c.subs()
 	return nil
 }
 func (c *Engine) run() (rterr error) {
@@ -167,16 +175,17 @@ func (c *Engine) run() (rterr error) {
 			logrus.Errorf("register servers(%s) failed:%v", c.cfg.Host, err)
 			time.Sleep(time.Second * 3)
 		} else {
-			logrus.Infof("register runner suceess!id:%s", c.id)
+			logrus.Infof("register runner suceess!id:%s", c.info.Id)
 		}
 	} else if time.Since(c.htms).Seconds() > 10 {
 		c.htms = time.Now()
 		messages.NewReplyCallback(c, clientBean.NewMessageBox(messages.MsgCmdHeart)).
 			Ok(func(c messages.IEngine, m *clientBean.MessageBox) {
 				logrus.Debugf("heart msg callback:%s!!!!!", m.Head.Id)
-			}).Err(func(c messages.IEngine, errs ...interface{}) {
-			logrus.Debugf("heart msg callback errs:%v!!!!!", errs...)
-		}).Exec()
+			}).
+			Err(func(c messages.IEngine, errs error) {
+				logrus.Debugf("heart msg callback errs:%v!!!!!", errs)
+			}).Exec()
 	} else if time.Since(c.htmr).Seconds() > 32 {
 		c.close()
 		time.Sleep(time.Second * 1)
