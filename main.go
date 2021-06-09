@@ -8,7 +8,7 @@ import (
 func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 	println("this is test for sdk")
-	egn := ywtree.NewEngine(&ywtree.Config{
+	egn := ywtree.NewEngine(nil, &ywtree.Config{
 		Host: "localhost:7000",
 		Org:  "mgr",
 		Name: "test",

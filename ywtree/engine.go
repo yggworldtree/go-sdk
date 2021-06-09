@@ -10,10 +10,12 @@ import (
 	"github.com/yggworldtree/go-core/bean/clientBean"
 	"github.com/yggworldtree/go-core/bean/hbtpBean"
 	"github.com/yggworldtree/go-core/common"
+	"github.com/yggworldtree/go-core/messages"
 	"github.com/yggworldtree/go-core/utils"
 	"github.com/yggworldtree/go-sdk/ywtree/cloud"
 	"net"
 	"runtime/debug"
+	"sync"
 	"time"
 )
 
@@ -29,21 +31,39 @@ type Engine struct {
 	regd  bool
 	sndch chan *clientBean.MessageBox
 	rcvch chan *clientBean.MessageBox
+
+	replylk sync.Mutex
+	replymp map[string]messages.IReply
 }
 
-func NewEngine(cfg *Config) *Engine {
+func NewEngine(ctx context.Context, cfg *Config) *Engine {
 	c := &Engine{
-		cfg:   cfg,
-		sndch: make(chan *clientBean.MessageBox, 100),
-		rcvch: make(chan *clientBean.MessageBox, 100),
+		cfg:     cfg,
+		sndch:   make(chan *clientBean.MessageBox, 100),
+		rcvch:   make(chan *clientBean.MessageBox, 100),
+		replymp: make(map[string]messages.IReply),
 	}
-	c.ctx, c.cncl = context.WithCancel(context.Background())
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	c.ctx, c.cncl = context.WithCancel(ctx)
 	return c
+}
+func (c *Engine) Ctx() context.Context {
+	return c.ctx
 }
 func (c *Engine) Stop() {
 	if c != nil && c.cncl != nil {
 		c.cncl()
 		c.cncl = nil
+	}
+	if c.sndch != nil {
+		close(c.sndch)
+		c.sndch = nil
+	}
+	if c.rcvch != nil {
+		close(c.rcvch)
+		c.rcvch = nil
 	}
 }
 func (c *Engine) Run() (rterr error) {
@@ -56,23 +76,15 @@ func (c *Engine) Run() (rterr error) {
 
 	go func() {
 		for !utils.EndContext(c.ctx) {
-			if c.regd && c.conn != nil {
-				if err := c.runRead(); err != nil {
-					logrus.Errorf("Client runRead err(end):%v", err)
-					c.close()
-				}
-			} else {
-				time.Sleep(time.Millisecond * 100)
+			if err := c.runRead(); err != nil {
+				logrus.Errorf("Client runRead err(end):%v", err)
+				c.close()
 			}
 		}
 	}()
 	go func() {
 		for !utils.EndContext(c.ctx) {
-			if c.regd && c.conn != nil {
-				c.runWrite()
-			} else {
-				time.Sleep(time.Millisecond * 100)
-			}
+			c.runWrite()
 		}
 	}()
 	go func() {
@@ -91,6 +103,7 @@ func (c *Engine) Run() (rterr error) {
 		}
 		time.Sleep(time.Millisecond * 100)
 	}
+	c.close()
 	return nil
 }
 func (c *Engine) close() {
@@ -100,14 +113,6 @@ func (c *Engine) close() {
 		c.conn = nil
 		c.regd = false
 	}
-	/*if c.sndch!=nil{
-		close(c.sndch)
-		c.sndch=nil
-	}
-	if c.rcvch!=nil{
-		close(c.rcvch)
-		c.rcvch=nil
-	}*/
 }
 func (c *Engine) reg() error {
 	c.regd = false
@@ -165,8 +170,13 @@ func (c *Engine) run() (rterr error) {
 			logrus.Infof("register runner suceess!id:%s", c.id)
 		}
 	} else if time.Since(c.htms).Seconds() > 10 {
-		c.Send("msg/heart", nil)
 		c.htms = time.Now()
+		messages.NewReplyCallback(c, clientBean.NewMessageBox(messages.MsgCmdHeart)).
+			Ok(func(c messages.IEngine, m *clientBean.MessageBox) {
+				logrus.Debugf("heart msg callback:%s!!!!!", m.Head.Id)
+			}).Err(func(c messages.IEngine, errs ...interface{}) {
+			logrus.Debugf("heart msg callback errs:%v!!!!!", errs...)
+		}).Exec()
 	} else if time.Since(c.htmr).Seconds() > 32 {
 		c.close()
 		time.Sleep(time.Second * 1)
@@ -182,8 +192,13 @@ func (c *Engine) runRead() error {
 			logrus.Errorf("%s", string(debug.Stack()))
 		}
 	}()
+	conn := c.conn
+	if !c.regd || conn == nil {
+		time.Sleep(time.Millisecond)
+		return nil
+	}
 
-	bts, err := utils.TcpRead(c.ctx, c.conn, 1)
+	bts, err := utils.TcpRead(c.ctx, conn, 1)
 	if err != nil {
 		return err
 	}
@@ -191,7 +206,7 @@ func (c *Engine) runRead() error {
 		logrus.Error("Client runRead 0x8d what????")
 		return nil
 	}
-	bts, err = utils.TcpRead(c.ctx, c.conn, 1)
+	bts, err = utils.TcpRead(c.ctx, conn, 1)
 	if err != nil {
 		return err
 	}
@@ -199,12 +214,12 @@ func (c *Engine) runRead() error {
 		logrus.Error("Client runRead 0x8f what????")
 		return nil
 	}
-	bts, err = utils.TcpRead(c.ctx, c.conn, 4)
+	bts, err = utils.TcpRead(c.ctx, conn, 4)
 	if err != nil {
 		return err
 	}
 	hdln := uint(utils.BigByteToInt(bts))
-	bts, err = utils.TcpRead(c.ctx, c.conn, 4)
+	bts, err = utils.TcpRead(c.ctx, conn, 4)
 	if err != nil {
 		return err
 	}
@@ -219,9 +234,9 @@ func (c *Engine) runRead() error {
 		return errors.New("bodyln out max")
 	}
 
-	msg := clientBean.NewMessageBox()
+	msg := &clientBean.MessageBox{}
 	if hdln > 0 {
-		bts, err = utils.TcpRead(c.ctx, c.conn, hdln)
+		bts, err = utils.TcpRead(c.ctx, conn, hdln)
 		if err != nil {
 			return err
 		}
@@ -231,13 +246,13 @@ func (c *Engine) runRead() error {
 		}
 	}
 	if bodyln > 0 {
-		bts, err = utils.TcpRead(c.ctx, c.conn, bodyln)
+		bts, err = utils.TcpRead(c.ctx, conn, bodyln)
 		if err != nil {
 			return err
 		}
 		msg.Body = bts
 	}
-	bts, err = utils.TcpRead(c.ctx, c.conn, 2)
+	bts, err = utils.TcpRead(c.ctx, conn, 2)
 	if err != nil {
 		return err
 	}
@@ -256,6 +271,7 @@ func (c *Engine) runWrite() {
 	}()
 
 	if c.sndch == nil {
+		time.Sleep(time.Millisecond)
 		return
 	}
 	msg, ok := <-c.sndch
@@ -272,22 +288,23 @@ func (c *Engine) runWrite() {
 		hds = bts
 	}
 
-	if c.conn == nil {
+	conn := c.conn
+	if conn == nil {
 		return
 	}
-	logrus.Debugf("send msg:%s(%s)", msg.Head.Command, msg.Head.Id)
+	//logrus.Debugf("send msg:%s(%s)", msg.Head.Command, msg.Head.Id)
 	hdln := utils.BigIntToByte(int64(len(hds)), 4)
 	bodyln := utils.BigIntToByte(int64(len(msg.Body)), 4)
-	c.conn.Write([]byte{0x8d, 0x8f})
-	c.conn.Write(hdln)
-	c.conn.Write(bodyln)
+	conn.Write([]byte{0x8d, 0x8f})
+	conn.Write(hdln)
+	conn.Write(bodyln)
 	if len(hds) > 0 {
-		c.conn.Write(hds)
+		conn.Write(hds)
 	}
 	if len(msg.Body) > 0 {
-		c.conn.Write(msg.Body)
+		conn.Write(msg.Body)
 	}
-	c.conn.Write([]byte{0x8e, 0x8f})
+	conn.Write([]byte{0x8e, 0x8f})
 }
 func (c *Engine) runRecv() (rterr error) {
 	defer func() {
@@ -298,31 +315,52 @@ func (c *Engine) runRecv() (rterr error) {
 		}
 	}()
 
-	select {
-	case msg := <-c.rcvch:
-		if msg.Head != nil {
-			logrus.Debugf("Engine recv msg-%s:%s", msg.Head.Command, string(msg.Body))
-			/*if fn, ok := mpCliFn[msg.Head.Command]; ok && fn != nil {
-				fn(c, msg)
-			}*/
-		}
-	default:
+	msg, ok := <-c.rcvch
+	if !ok {
 		time.Sleep(time.Millisecond)
+		return errors.New("rcvch is closed?")
+	}
+	if msg.Head == nil {
+		return nil
+	}
+	if msg.Head.Command == messages.MsgCmdReply {
+		mid := msg.Head.Args.GetString("mid")
+		if mid == "" {
+			return fmt.Errorf("recv msg-%s err: mid empty", msg.Head.Command)
+		}
+		c.replylk.Lock()
+		e, ok := c.replymp[mid]
+		delete(c.replymp, mid)
+		c.replylk.Unlock()
+		if !ok {
+			return nil
+		}
+		fn := e.OkFun()
+		if fn != nil {
+			fn(c, msg)
+		}
+		return nil
+	}
+
+	fn, ok := mpCliFn[msg.Head.Command]
+	if ok && fn != nil {
+		fn(c, msg)
+	} else {
+		logrus.Debugf("Engine recv noExist msg-%s:%s", msg.Head.Command, string(msg.Body))
 	}
 	return nil
 }
-func (c *Engine) Send(cmd string, body []byte, args ...utils.Map) {
-	msg := clientBean.NewMessageBox()
-	msg.Head.Command = cmd
+func (c *Engine) Send(cmd string, body []byte, args ...utils.Map) error {
+	msg := clientBean.NewMessageBox(cmd)
 	msg.Body = body
 	if len(args) > 0 {
 		msg.Head.Args = args[0]
 	}
-	c.Sends(msg)
+	return c.Sends(msg)
 }
-func (c *Engine) Sends(msg *clientBean.MessageBox) {
+func (c *Engine) Sends(msg *clientBean.MessageBox) error {
 	if msg == nil || msg.Head == nil || msg.Head.Command == "" {
-		return
+		return errors.New("msg param err")
 	}
 	if msg.Head.Id == "" {
 		msg.Head.Id = utils.NewXid()
@@ -335,16 +373,41 @@ func (c *Engine) Sends(msg *clientBean.MessageBox) {
 		}()
 		c.sndch <- msg
 	}()
+	return nil
 }
-func (c *Engine) SendReply(m *clientBean.MessageBox, stat string) {
+func (c *Engine) SendReply(m *clientBean.MessageBox, stat string, body ...interface{}) error {
 	if m == nil || m.Head == nil || m.Head.Id == "" {
-		return
+		return errors.New("msg err")
 	}
-	msg := clientBean.NewMessageBox()
-	msg.Head.Command = "msg/reply"
-	msg.PutBody(&clientBean.MessageReply{
-		Id:     m.Head.Id,
-		Status: stat,
+	msg := clientBean.NewMessageBox(messages.MsgCmdReply, utils.Map{
+		"mid":    m.Head.Id,
+		"status": stat,
 	})
-	c.Sends(msg)
+	if len(body) > 0 {
+		msg.PutBody(body[0])
+	}
+	return c.Sends(msg)
+}
+func (c *Engine) SendForReply(e messages.IReply) error {
+	msg := e.Message()
+	if msg == nil || msg.Head == nil || msg.Head.Id != "" {
+		return errors.New("msg id err")
+	}
+	err := c.Sends(msg)
+	if err != nil {
+		return err
+	}
+	c.replylk.Lock()
+	defer c.replylk.Unlock()
+	c.replymp[msg.Head.Id] = e
+	return nil
+}
+func (c *Engine) RmReply(e messages.IReply) error {
+	if e.Message().Head.Id != "" {
+		return errors.New("msg id err")
+	}
+	c.replylk.Lock()
+	defer c.replylk.Unlock()
+	delete(c.replymp, e.Message().Head.Id)
+	return nil
 }
