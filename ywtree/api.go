@@ -1,33 +1,43 @@
 package ywtree
 
 import (
+	"errors"
+	"fmt"
 	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
-	"github.com/yggworldtree/go-core/utils"
-	"time"
+	"github.com/yggworldtree/go-core/bean"
 )
 
-const (
-	RPCHostCode = 1
-)
-
-func (c *Engine) genTokens(req *hbtp.Request) string {
-	hd := req.ReqHeader()
-	return utils.Md5String(hd.Path + hd.RelIp + hd.Times + c.info.Token)
-}
-func (c *Engine) NewHbtpReq(method string, tmots ...time.Duration) (*hbtp.Request, error) {
-	return hbtp.NewDoRPCReq(c.cfg.Host, RPCHostCode, method, c.info.Id, c.genTokens, tmots...)
-}
-func (c *Engine) DoHbtpJson(method string, in, out interface{}, hd ...map[string]interface{}) error {
-	req, err := c.NewHbtpReq(method)
+func (c *Engine) SubTopic(pars []*bean.TopicInfo) error {
+	code, bts, err := c.doHbtpString("SubTopic", &bean.ClientSubTopic{
+		Topics: pars,
+	})
 	if err != nil {
 		return err
 	}
-	return hbtp.DoJson(req, in, out, hd...)
-}
-func (c *Engine) DoHbtpString(method string, in interface{}, hd ...hbtp.Mp) (int, []byte, error) {
-	req, err := c.NewHbtpReq(method)
-	if err != nil {
-		return 0, nil, err
+	if code != hbtp.ResStatusOk {
+		return fmt.Errorf("server err(%d):%s", code, string(bts))
 	}
-	return hbtp.DoString(req, in, hd...)
+	//logrus.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
+	return nil
+}
+func (c *Engine) PushTopic(pth *bean.TopicPath, data interface{}, pars ...*bean.TopicParam) error {
+	if pth == nil {
+		return errors.New("param err")
+	}
+	/*if len(data)>common.MaxTopicLen{
+		return fmt.Errorf("topic data length out over:%d",common.MaxTopicLen)
+	}*/
+	hd := hbtp.Mp{"topicPath": pth}
+	if len(pars) > 0 {
+		hd["type"] = pars[0].Type
+	}
+	code, bts, err := c.doHbtpString("PushTopic", data, hd)
+	if err != nil {
+		return err
+	}
+	if code != hbtp.ResStatusOk {
+		return fmt.Errorf("server err(%d):%s", code, string(bts))
+	}
+	//logrus.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
+	return nil
 }

@@ -7,8 +7,7 @@ import (
 	"fmt"
 	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
 	"github.com/sirupsen/logrus"
-	"github.com/yggworldtree/go-core/bean/clientBean"
-	"github.com/yggworldtree/go-core/bean/hbtpBean"
+	"github.com/yggworldtree/go-core/bean"
 	"github.com/yggworldtree/go-core/common"
 	"github.com/yggworldtree/go-core/messages"
 	"github.com/yggworldtree/go-core/utils"
@@ -19,7 +18,7 @@ import (
 )
 
 type Engine struct {
-	info hbtpBean.ClientRegRes
+	info bean.ClientRegRes
 	cfg  *Config
 	ctx  context.Context
 	cncl context.CancelFunc
@@ -28,18 +27,20 @@ type Engine struct {
 	htmr time.Time
 
 	regd  bool
-	sndch chan *clientBean.MessageBox
-	rcvch chan *clientBean.MessageBox
+	sndch chan *messages.MessageBox
+	rcvch chan *messages.MessageBox
 
+	lsr     IYWTListener
 	replylk sync.Mutex
 	replymp map[string]messages.IReply
 }
 
-func NewEngine(ctx context.Context, cfg *Config) *Engine {
+func NewEngine(ctx context.Context, lsr IYWTListener, cfg *Config) *Engine {
 	c := &Engine{
 		cfg:     cfg,
-		sndch:   make(chan *clientBean.MessageBox, 100),
-		rcvch:   make(chan *clientBean.MessageBox, 100),
+		lsr:     lsr,
+		sndch:   make(chan *messages.MessageBox, 100),
+		rcvch:   make(chan *messages.MessageBox, 100),
 		replymp: make(map[string]messages.IReply),
 	}
 	if ctx == nil {
@@ -47,6 +48,9 @@ func NewEngine(ctx context.Context, cfg *Config) *Engine {
 	}
 	c.ctx, c.cncl = context.WithCancel(ctx)
 	return c
+}
+func (c *Engine) SetListener(lsr IYWTListener) {
+	c.lsr = lsr
 }
 func (c *Engine) Ctx() context.Context {
 	return c.ctx
@@ -65,12 +69,15 @@ func (c *Engine) Stop() {
 		c.rcvch = nil
 	}
 }
-func (c *Engine) Run() (rterr error) {
+func (c *Engine) Run() error {
 	if c.cfg == nil {
 		return errors.New("config is nil")
 	}
 	if c.cfg.Host == "" || c.cfg.Org == "" || c.cfg.Name == "" {
 		return errors.New("config param is err")
+	}
+	if c.lsr == nil {
+		return errors.New("listener is nil")
 	}
 
 	go func() {
@@ -112,21 +119,18 @@ func (c *Engine) close() {
 		c.conn = nil
 		c.regd = false
 	}
-}
-func (c *Engine) subs() {
-	code, bts, err := c.DoHbtpString("SubTopic", &hbtpBean.ClientSubTopic{
-		Topics: []string{"haha", "123123123"},
-	})
-	logrus.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
+	if c.lsr != nil {
+		c.lsr.OnDisconnect(c)
+	}
 }
 func (c *Engine) reg() error {
 	c.regd = false
-	req, err := c.NewHbtpReq("Reg", time.Second*5)
+	req, err := c.newHbtpReq("Reg", time.Second*5)
 	if err != nil {
 		return err
 	}
 	defer req.Close()
-	err = req.Do(c.ctx, &hbtpBean.ClientRegInfo{
+	err = req.Do(c.ctx, &bean.ClientRegInfo{
 		Org:  c.cfg.Org,
 		Name: c.cfg.Name,
 	})
@@ -136,7 +140,7 @@ func (c *Engine) reg() error {
 	if req.ResCode() != hbtp.ResStatusOk {
 		return fmt.Errorf("res code(%d) not ok:%s", req.ResCode(), string(req.ResBodyBytes()))
 	}
-	info := &hbtpBean.ClientRegRes{}
+	info := &bean.ClientRegRes{}
 	err = req.ResBodyJson(info)
 	if err != nil {
 		return err
@@ -149,7 +153,9 @@ func (c *Engine) reg() error {
 	c.htms = time.Now()
 	c.htmr = time.Now()
 	c.regd = true
-	c.subs()
+	if c.lsr != nil {
+		c.lsr.OnConnect(c)
+	}
 	return nil
 }
 func (c *Engine) run() (rterr error) {
@@ -179,8 +185,8 @@ func (c *Engine) run() (rterr error) {
 		}
 	} else if time.Since(c.htms).Seconds() > 10 {
 		c.htms = time.Now()
-		messages.NewReplyCallback(c, clientBean.NewMessageBox(messages.MsgCmdHeart)).
-			Ok(func(c messages.IEngine, m *clientBean.MessageBox) {
+		messages.NewReplyCallback(c, messages.NewMessageBox(messages.MsgCmdHeart)).
+			Ok(func(c messages.IEngine, m *messages.MessageBox) {
 				logrus.Debugf("heart msg callback:%s!!!!!", m.Head.Id)
 			}).
 			Err(func(c messages.IEngine, errs error) {
@@ -243,7 +249,7 @@ func (c *Engine) runRead() error {
 		return errors.New("bodyln out max")
 	}
 
-	msg := &clientBean.MessageBox{}
+	msg := &messages.MessageBox{}
 	if hdln > 0 {
 		bts, err = utils.TcpRead(c.ctx, conn, hdln)
 		if err != nil {
@@ -360,14 +366,14 @@ func (c *Engine) runRecv() (rterr error) {
 	return nil
 }
 func (c *Engine) Send(cmd string, body []byte, args ...utils.Map) error {
-	msg := clientBean.NewMessageBox(cmd)
+	msg := messages.NewMessageBox(cmd)
 	msg.Body = body
 	if len(args) > 0 {
 		msg.Head.Args = args[0]
 	}
 	return c.Sends(msg)
 }
-func (c *Engine) Sends(msg *clientBean.MessageBox) error {
+func (c *Engine) Sends(msg *messages.MessageBox) error {
 	if msg == nil || msg.Head == nil || msg.Head.Command == "" {
 		return errors.New("msg param err")
 	}
@@ -384,11 +390,11 @@ func (c *Engine) Sends(msg *clientBean.MessageBox) error {
 	}()
 	return nil
 }
-func (c *Engine) SendReply(m *clientBean.MessageBox, stat string, body ...interface{}) error {
+func (c *Engine) SendReply(m *messages.MessageBox, stat string, body ...interface{}) error {
 	if m == nil || m.Head == nil || m.Head.Id == "" {
 		return errors.New("msg err")
 	}
-	msg := clientBean.NewMessageBox(messages.MsgCmdReply, utils.Map{
+	msg := messages.NewMessageBox(messages.MsgCmdReply, utils.Map{
 		"mid":    m.Head.Id,
 		"status": stat,
 	})
