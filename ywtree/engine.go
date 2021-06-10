@@ -131,8 +131,10 @@ func (c *Engine) reg() error {
 	}
 	defer req.Close()
 	err = req.Do(c.ctx, &bean.ClientRegInfo{
-		Org:  c.cfg.Org,
-		Name: c.cfg.Name,
+		Id:    c.info.Id,
+		Org:   c.cfg.Org,
+		Name:  c.cfg.Name,
+		Alias: c.cfg.Alias,
 	})
 	if err != nil {
 		return err
