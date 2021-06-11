@@ -125,15 +125,12 @@ func (c *Engine) close() {
 }
 func (c *Engine) reg() error {
 	c.regd = false
-	req, err := c.newHbtpReq("Reg", time.Second*5)
-	if err != nil {
-		return err
-	}
+	req := hbtp.NewRequest(c.cfg.Host, RPCHostCode, time.Second*10).Command("Reg")
 	defer req.Close()
 	if c.info.Alias == "" {
 		c.info.Alias = c.cfg.Alias
 	}
-	err = req.Do(c.ctx, &bean.ClientRegInfo{
+	err := req.Do(c.ctx, &bean.ClientRegInfo{
 		Id:    c.info.Id,
 		Org:   c.cfg.Org,
 		Name:  c.cfg.Name,
@@ -191,9 +188,9 @@ func (c *Engine) run() (rterr error) {
 	} else if time.Since(c.htms).Seconds() > 10 {
 		c.htms = time.Now()
 		messages.NewReplyCallback(c, messages.NewMessageBox(messages.MsgCmdHeart)).
-			Ok(func(c messages.IEngine, m *messages.MessageBox) {
+			/*Ok(func(c messages.IEngine, m *messages.MessageBox) {
 				logrus.Debugf("heart msg callback:%s!!!!!", m.Head.Id)
-			}).
+			}).*/
 			Err(func(c messages.IEngine, errs error) {
 				logrus.Debugf("heart msg callback errs:%v!!!!!", errs)
 			}).Exec()

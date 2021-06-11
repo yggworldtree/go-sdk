@@ -4,6 +4,8 @@ github.com/mgr9525/HyperByte-Transfer-Protocol v0.0.0-20210607023243-1edb4639e72
 github.com/mgr9525/HyperByte-Transfer-Protocol v0.0.0-20210607023243-1edb4639e722/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
 github.com/mgr9525/HyperByte-Transfer-Protocol v0.0.0-20210609110405-55d3a174aa03 h1:E1HlVtI/M7Je4evYzs9/WLxVutlfk5ljALpJnTqGr74=
 github.com/mgr9525/HyperByte-Transfer-Protocol v0.0.0-20210609110405-55d3a174aa03/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
+github.com/mgr9525/HyperByte-Transfer-Protocol v0.0.0-20210611082054-39a00eba7998 h1:VhhZ0AtN9EKCnHFst3mU8vU7+sWttf+n8h5kb/dESUQ=
+github.com/mgr9525/HyperByte-Transfer-Protocol v0.0.0-20210611082054-39a00eba7998/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sirupsen/logrus v1.8.1 h1:dJKuHgqk1NNQlqoA6BTlM1Wf9DOH3NBjQyu0h9+AZZE=

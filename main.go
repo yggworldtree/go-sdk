@@ -31,6 +31,14 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 		},
 	})
 	go func() {
+		ls, err := egn.GroupClients("mgr", "test")
+		if err != nil {
+			logrus.Debugf("GroupClients err:%v", err)
+		} else {
+			for i, v := range ls {
+				logrus.Debugf("GroupClients cli[%d]:%s/%s:%s(%s),", i, v.Org, v.Name, v.Alias, v.Id)
+			}
+		}
 		egn.PushTopic(bean.NewTopicPath("mgr", "cpu_info"), []byte("第一次发送"))
 		time.Sleep(time.Second * 5)
 		logrus.Debugf("PushTopic!!!!!!!!!!!!!!!")
