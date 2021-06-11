@@ -130,11 +130,14 @@ func (c *Engine) reg() error {
 		return err
 	}
 	defer req.Close()
+	if c.info.Alias == "" {
+		c.info.Alias = c.cfg.Alias
+	}
 	err = req.Do(c.ctx, &bean.ClientRegInfo{
 		Id:    c.info.Id,
 		Org:   c.cfg.Org,
 		Name:  c.cfg.Name,
-		Alias: c.cfg.Alias,
+		Alias: c.info.Alias,
 	})
 	if err != nil {
 		return err
@@ -155,9 +158,6 @@ func (c *Engine) reg() error {
 	c.htms = time.Now()
 	c.htmr = time.Now()
 	c.regd = true
-	if c.lsr != nil {
-		c.lsr.OnConnect(c)
-	}
 	return nil
 }
 func (c *Engine) run() (rterr error) {
@@ -183,7 +183,10 @@ func (c *Engine) run() (rterr error) {
 			logrus.Errorf("register servers(%s) failed:%v", c.cfg.Host, err)
 			time.Sleep(time.Second * 3)
 		} else {
-			logrus.Infof("register runner suceess!id:%s", c.info.Id)
+			logrus.Infof("register runner suceess!id:%s,alias:%s", c.info.Id, c.info.Alias)
+			if c.lsr != nil {
+				c.lsr.OnConnect(c)
+			}
 		}
 	} else if time.Since(c.htms).Seconds() > 10 {
 		c.htms = time.Now()
