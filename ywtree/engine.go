@@ -55,6 +55,12 @@ func NewEngine(ctx context.Context, lsr IYWTListener, cfg *Config) *Engine {
 	c.ctx, c.cncl = context.WithCancel(ctx)
 	return c
 }
+func (c *Engine) Id() string {
+	return c.info.Id
+}
+func (c *Engine) Alias() string {
+	return c.info.Alias
+}
 func (c *Engine) SetListener(lsr IYWTListener) {
 	c.lsr = lsr
 }

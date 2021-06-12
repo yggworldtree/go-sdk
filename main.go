@@ -8,10 +8,12 @@ import (
 	"time"
 )
 
+var egn *ywtree.Engine
+
 func main() {
 	logrus.SetLevel(logrus.DebugLevel)
 	println("this is test for sdk")
-	egn := ywtree.NewEngine(nil, &TmpLsr{}, &ywtree.Config{
+	egn = ywtree.NewEngine(nil, &TmpLsr{}, &ywtree.Config{
 		Host: "localhost:7000",
 		Org:  "mgr",
 		Name: "test",
@@ -76,5 +78,5 @@ func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine) {}
 func testFun(c *hbtp.Context) {
 	code := c.ReqHeader().GetString("code")
 	logrus.Debugf("grpc testFun code:%s", code)
-	c.ResString(hbtp.ResStatusOk, "ok")
+	c.ResString(hbtp.ResStatusOk, egn.Alias()+":ok")
 }
