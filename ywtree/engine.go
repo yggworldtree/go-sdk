@@ -2,16 +2,15 @@ package ywtree
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
 	"github.com/sirupsen/logrus"
 	"github.com/yggworldtree/go-core/bean"
-	"github.com/yggworldtree/go-core/common"
 	"github.com/yggworldtree/go-core/messages"
 	"github.com/yggworldtree/go-core/utils"
 	"net"
+	"net/url"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -34,6 +33,7 @@ type Engine struct {
 	replylk sync.Mutex
 	replymp map[string]messages.IReply
 
+	hbtpconf  hbtp.Config
 	hbtpfnlk  sync.Mutex
 	hbtpfns   map[int32]hbtp.ConnFun
 	hbtpnotfn hbtp.ConnFun
@@ -41,12 +41,13 @@ type Engine struct {
 
 func NewEngine(ctx context.Context, lsr IYWTListener, cfg *Config) *Engine {
 	c := &Engine{
-		cfg:     cfg,
-		lsr:     lsr,
-		sndch:   make(chan *messages.MessageBox, 100),
-		rcvch:   make(chan *messages.MessageBox, 100),
-		replymp: make(map[string]messages.IReply),
-		hbtpfns: make(map[int32]hbtp.ConnFun),
+		cfg:      cfg,
+		lsr:      lsr,
+		sndch:    make(chan *messages.MessageBox, 100),
+		rcvch:    make(chan *messages.MessageBox, 100),
+		replymp:  make(map[string]messages.IReply),
+		hbtpfns:  make(map[int32]hbtp.ConnFun),
+		hbtpconf: hbtp.MakeConfig(),
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -194,7 +195,7 @@ func (c *Engine) run() (rterr error) {
 		c.htms = time.Now()
 		messages.NewReplyCallback(c, messages.NewMessageBox(messages.CmdHeart)).
 			/*Ok(func(c messages.IEngine, m *messages.MessageBox) {
-				logrus.Debugf("heart msg callback:%s!!!!!", m.Head.Id)
+				logrus.Debugf("heart msg callback:%s!!!!!", m.Info.Id)
 			}).*/
 			Err(func(c messages.IEngine, errs error) {
 				logrus.Debugf("heart msg callback errs:%v!!!!!", errs)
@@ -220,7 +221,7 @@ func (c *Engine) runRead() error {
 		return nil
 	}
 
-	bts, err := utils.TcpRead(c.ctx, conn, 1)
+	bts, err := hbtp.TcpRead(c.ctx, conn, 1)
 	if err != nil {
 		return err
 	}
@@ -228,7 +229,7 @@ func (c *Engine) runRead() error {
 		logrus.Error("Client runRead 0x8d what????")
 		return nil
 	}
-	bts, err = utils.TcpRead(c.ctx, conn, 1)
+	bts, err = hbtp.TcpRead(c.ctx, conn, 1)
 	if err != nil {
 		return err
 	}
@@ -236,45 +237,11 @@ func (c *Engine) runRead() error {
 		logrus.Error("Client runRead 0x8f what????")
 		return nil
 	}
-	bts, err = utils.TcpRead(c.ctx, conn, 4)
+	msg, err := messages.ReadMessageBox(c.ctx, conn, &c.hbtpconf)
 	if err != nil {
 		return err
 	}
-	hdln := uint(utils.BigByteToInt(bts))
-	bts, err = utils.TcpRead(c.ctx, conn, 4)
-	if err != nil {
-		return err
-	}
-	bodyln := uint(utils.BigByteToInt(bts))
-
-	if hdln > common.MaxCliHeadLen {
-		logrus.Errorf("Client runRead hdln out:%d/%d", hdln, common.MaxCliHeadLen)
-		return errors.New("hdln out max")
-	}
-	if bodyln > common.MaxCliBodyLen {
-		logrus.Errorf("Client runRead bodyln out:%d/%d", bodyln, common.MaxCliBodyLen)
-		return errors.New("bodyln out max")
-	}
-
-	msg := &messages.MessageBox{}
-	if hdln > 0 {
-		bts, err = utils.TcpRead(c.ctx, conn, hdln)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(bts, &msg.Head)
-		if err != nil {
-			return nil
-		}
-	}
-	if bodyln > 0 {
-		bts, err = utils.TcpRead(c.ctx, conn, bodyln)
-		if err != nil {
-			return err
-		}
-		msg.Body = bts
-	}
-	bts, err = utils.TcpRead(c.ctx, conn, 2)
+	bts, err = hbtp.TcpRead(c.ctx, conn, 2)
 	if err != nil {
 		return err
 	}
@@ -300,33 +267,9 @@ func (c *Engine) runWrite() {
 	if !ok {
 		return
 	}
-	var hds []byte
-	if msg.Head != nil {
-		bts, err := json.Marshal(msg.Head)
-		if err != nil {
-			logrus.Errorf("Client runWrite json err:%+v", err)
-			return
-		}
-		hds = bts
-	}
-
-	conn := c.conn
-	if conn == nil {
-		return
-	}
-	//logrus.Debugf("send msg:%s(%s)", msg.Head.Command, msg.Head.Id)
-	hdln := utils.BigIntToByte(int64(len(hds)), 4)
-	bodyln := utils.BigIntToByte(int64(len(msg.Body)), 4)
-	conn.Write([]byte{0x8d, 0x8f})
-	conn.Write(hdln)
-	conn.Write(bodyln)
-	if len(hds) > 0 {
-		conn.Write(hds)
-	}
-	if len(msg.Body) > 0 {
-		conn.Write(msg.Body)
-	}
-	conn.Write([]byte{0x8e, 0x8f})
+	c.conn.Write([]byte{0x8d, 0x8f})
+	messages.WriteMessageBox(c.conn, msg)
+	c.conn.Write([]byte{0x8e, 0x8f})
 }
 func (c *Engine) runRecv() (rterr error) {
 	defer func() {
@@ -342,7 +285,7 @@ func (c *Engine) runRecv() (rterr error) {
 		time.Sleep(time.Millisecond)
 		return errors.New("rcvch is closed?")
 	}
-	if msg.Head == nil {
+	if msg.Info == nil {
 		return nil
 	}
 	go c.onMsg(msg)
@@ -356,15 +299,15 @@ func (c *Engine) onMsg(msg *messages.MessageBox) {
 		}
 	}()
 
-	switch msg.Head.Command {
+	switch msg.Info.Command {
 	case messages.CmdTopicGet:
 		c.onTopicGet(msg)
 	case messages.CmdNetConnect:
 		c.onNetConnect(msg)
 	case messages.CmdReply:
-		mid := msg.Head.Args.GetString("mid")
+		mid := msg.Info.Args.Get("mid")
 		if mid == "" {
-			logrus.Debugf("recv msg-%s err: mid empty", msg.Head.Command)
+			logrus.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
 			return
 		}
 		c.replylk.Lock()
@@ -372,7 +315,7 @@ func (c *Engine) onMsg(msg *messages.MessageBox) {
 		delete(c.replymp, mid)
 		c.replylk.Unlock()
 		if !ok {
-			logrus.Debugf("recv msg-%s err: mid empty", msg.Head.Command)
+			logrus.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
 			return
 		}
 		fn := e.OkFun()
@@ -380,23 +323,20 @@ func (c *Engine) onMsg(msg *messages.MessageBox) {
 			fn(c, msg)
 		}
 	default:
-		logrus.Debugf("Engine recv noExist msg-%s:%s", msg.Head.Command, string(msg.Body))
+		logrus.Debugf("Engine recv noExist msg-%s:%s", msg.Info.Command, string(msg.Body))
 	}
 }
-func (c *Engine) Send(cmd string, body []byte, args ...utils.Map) error {
-	msg := messages.NewMessageBox(cmd)
+func (c *Engine) Send(cmd string, body []byte, args ...url.Values) error {
+	msg := messages.NewMessageBox(cmd, args...)
 	msg.Body = body
-	if len(args) > 0 {
-		msg.Head.Args = args[0]
-	}
 	return c.Sends(msg)
 }
 func (c *Engine) Sends(msg *messages.MessageBox) error {
-	if msg == nil || msg.Head == nil || msg.Head.Command == "" {
+	if msg == nil || msg.Info == nil || msg.Info.Command == "" {
 		return errors.New("msg param err")
 	}
-	if msg.Head.Id == "" {
-		msg.Head.Id = utils.NewXid()
+	if msg.Info.Id == "" {
+		msg.Info.Id = utils.NewXid()
 	}
 	go func() {
 		defer func() {
@@ -409,13 +349,13 @@ func (c *Engine) Sends(msg *messages.MessageBox) error {
 	return nil
 }
 func (c *Engine) SendReply(m *messages.MessageBox, stat string, body ...interface{}) error {
-	if m == nil || m.Head == nil || m.Head.Id == "" {
+	if m == nil || m.Info == nil || m.Info.Id == "" {
 		return errors.New("msg err")
 	}
-	msg := messages.NewMessageBox(messages.CmdReply, utils.Map{
-		"mid":    m.Head.Id,
-		"status": stat,
-	})
+	pars := url.Values{}
+	pars.Set("mid", m.Info.Id)
+	pars.Set("status", stat)
+	msg := messages.NewMessageBox(messages.CmdReply, pars)
 	if len(body) > 0 {
 		msg.PutBody(body[0])
 	}
@@ -423,7 +363,7 @@ func (c *Engine) SendReply(m *messages.MessageBox, stat string, body ...interfac
 }
 func (c *Engine) SendForReply(e messages.IReply) error {
 	msg := e.Message()
-	if msg == nil || msg.Head == nil || msg.Head.Id != "" {
+	if msg == nil || msg.Info == nil || msg.Info.Id != "" {
 		return errors.New("msg id err")
 	}
 	err := c.Sends(msg)
@@ -432,15 +372,15 @@ func (c *Engine) SendForReply(e messages.IReply) error {
 	}
 	c.replylk.Lock()
 	defer c.replylk.Unlock()
-	c.replymp[msg.Head.Id] = e
+	c.replymp[msg.Info.Id] = e
 	return nil
 }
 func (c *Engine) RmReply(e messages.IReply) error {
-	if e.Message().Head.Id != "" {
+	if e.Message().Info.Id != "" {
 		return errors.New("msg id err")
 	}
 	c.replylk.Lock()
 	defer c.replylk.Unlock()
-	delete(c.replymp, e.Message().Head.Id)
+	delete(c.replymp, e.Message().Info.Id)
 	return nil
 }

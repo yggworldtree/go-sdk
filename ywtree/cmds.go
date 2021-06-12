@@ -8,7 +8,7 @@ import (
 )
 
 func (c *Engine) onTopicGet(msg *messages.MessageBox) {
-	tph := msg.Head.Args.GetString("topicPath")
+	tph := msg.Info.Args.Get("topicPath")
 	if tph == "" {
 		logrus.Debugf("onTopicGet param err1")
 		return
@@ -25,7 +25,7 @@ func (c *Engine) onTopicGet(msg *messages.MessageBox) {
 	}
 }
 func (c *Engine) onNetConnect(msg *messages.MessageBox) {
-	code := msg.Head.Args.GetString("code")
+	code := msg.Info.Args.Get("code")
 	if code == "" {
 		logrus.Debugf("onNetConnect param err1")
 		return

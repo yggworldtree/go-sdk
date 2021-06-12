@@ -36,7 +36,7 @@ func (c *Engine) netHandleConn(conn net.Conn) {
 			conn.Close()
 		}
 	}()
-	res, err := hbtp.ParseContext(c.ctx, conn, hbtp.MakeConfig())
+	res, err := hbtp.ParseContext(c.ctx, conn, c.hbtpconf)
 	if err != nil {
 		hbtp.Debugf("Engine ParseContext recover:%+v", err)
 		return
