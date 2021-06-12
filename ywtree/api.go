@@ -44,17 +44,17 @@ func (c *Engine) PushTopic(pth *bean.TopicPath,
 	return nil
 }
 func (c *Engine) GroupClients(org, name string) ([]*bean.GroupClients, error) {
-	pars := hbtp.Map{"fullPath": fmt.Sprintf("%s/%s", org, name)}
 	var ls []*bean.GroupClients
+	pars := hbtp.Map{"fullPath": fmt.Sprintf("%s/%s", org, name)}
 	err := c.doHbtpJson("GroupClients", pars, &ls)
 	if err != nil {
 		return nil, err
 	}
 	return ls, nil
 }
-func (c *Engine) GrpcClientRequest(pth *bean.CliGroupPath,
+func (c *Engine) HbtpGrpcRequest(pth *bean.CliGroupPath,
 	control int32, cmd string, args ...url.Values) (*hbtp.Request, error) {
-	req := c.newHbtpReq("GrpcClient")
+	req := c.newHbtpReq("GrpcClientReq")
 	defer req.Close()
 	req.ReqHeader().Set("cliPath", pth.String())
 	err := req.Do(c.ctx, nil)

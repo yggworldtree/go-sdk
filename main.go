@@ -1,6 +1,7 @@
 package main
 
 import (
+	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
 	"github.com/sirupsen/logrus"
 	"github.com/yggworldtree/go-core/bean"
 	"github.com/yggworldtree/go-sdk/ywtree"
@@ -15,6 +16,7 @@ func main() {
 		Org:  "mgr",
 		Name: "test",
 	})
+	egn.RegHbtpFun(1, testFun)
 	err := egn.Run()
 	if err != nil {
 		println("mgr.run err:" + err.Error())
@@ -40,9 +42,23 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 			}
 		}
 		egn.PushTopic(bean.NewTopicPath("mgr", "cpu_info"), []byte("第一次发送"))
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 3)
 		logrus.Debugf("PushTopic!!!!!!!!!!!!!!!")
 		egn.PushTopic(bean.NewTopicPath("mgr", "cpu_info"), []byte("第二次发送"))
+		logrus.Debugf("HbtpGrpcRequest!!!!!!!!!!!!!!!")
+		req, err := egn.HbtpGrpcRequest(bean.NewCliGroupPath("mgr", "test"), 1, "")
+		if err != nil {
+			logrus.Debugf("HbtpGrpcRequest err:%v", err)
+			return
+		}
+		defer req.Close()
+		req.ReqHeader().Set("code", "1234567")
+		err = req.Do(nil, nil)
+		if err != nil {
+			logrus.Debugf("HbtpGrpcRequest do err:%v", err)
+			return
+		}
+		logrus.Debugf("HbtpGrpcRequest res(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
 	}()
 }
 func (c *TmpLsr) OnDisconnect(egn *ywtree.Engine) {
@@ -56,3 +72,9 @@ func (c *TmpLsr) OnMessage(egn *ywtree.Engine, pth *bean.TopicPath, data []byte)
 	}
 }
 func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine) {}
+
+func testFun(c *hbtp.Context) {
+	code := c.ReqHeader().GetString("code")
+	logrus.Debugf("grpc testFun code:%s", code)
+	c.ResString(hbtp.ResStatusOk, "ok")
+}

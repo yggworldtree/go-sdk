@@ -33,6 +33,10 @@ type Engine struct {
 	lsr     IYWTListener
 	replylk sync.Mutex
 	replymp map[string]messages.IReply
+
+	hbtpfnlk  sync.Mutex
+	hbtpfns   map[int32]hbtp.ConnFun
+	hbtpnotfn hbtp.ConnFun
 }
 
 func NewEngine(ctx context.Context, lsr IYWTListener, cfg *Config) *Engine {
@@ -42,6 +46,7 @@ func NewEngine(ctx context.Context, lsr IYWTListener, cfg *Config) *Engine {
 		sndch:   make(chan *messages.MessageBox, 100),
 		rcvch:   make(chan *messages.MessageBox, 100),
 		replymp: make(map[string]messages.IReply),
+		hbtpfns: make(map[int32]hbtp.ConnFun),
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -187,7 +192,7 @@ func (c *Engine) run() (rterr error) {
 		}
 	} else if time.Since(c.htms).Seconds() > 10 {
 		c.htms = time.Now()
-		messages.NewReplyCallback(c, messages.NewMessageBox(messages.MsgCmdHeart)).
+		messages.NewReplyCallback(c, messages.NewMessageBox(messages.CmdHeart)).
 			/*Ok(func(c messages.IEngine, m *messages.MessageBox) {
 				logrus.Debugf("heart msg callback:%s!!!!!", m.Head.Id)
 			}).*/
@@ -340,32 +345,43 @@ func (c *Engine) runRecv() (rterr error) {
 	if msg.Head == nil {
 		return nil
 	}
-	if msg.Head.Command == messages.MsgCmdReply {
+	go c.onMsg(msg)
+	return nil
+}
+func (c *Engine) onMsg(msg *messages.MessageBox) {
+	defer func() {
+		if err := recover(); err != nil {
+			logrus.Errorf("Engine onMsg recover:%+v", err)
+			logrus.Errorf("%s", string(debug.Stack()))
+		}
+	}()
+
+	switch msg.Head.Command {
+	case messages.CmdTopicGet:
+		c.onTopicGet(msg)
+	case messages.CmdNetConnect:
+		c.onNetConnect(msg)
+	case messages.CmdReply:
 		mid := msg.Head.Args.GetString("mid")
 		if mid == "" {
-			return fmt.Errorf("recv msg-%s err: mid empty", msg.Head.Command)
+			logrus.Debugf("recv msg-%s err: mid empty", msg.Head.Command)
+			return
 		}
 		c.replylk.Lock()
 		e, ok := c.replymp[mid]
 		delete(c.replymp, mid)
 		c.replylk.Unlock()
 		if !ok {
-			return nil
+			logrus.Debugf("recv msg-%s err: mid empty", msg.Head.Command)
+			return
 		}
 		fn := e.OkFun()
 		if fn != nil {
 			fn(c, msg)
 		}
-		return nil
-	}
-
-	fn, ok := mpCliFn[msg.Head.Command]
-	if ok && fn != nil {
-		fn(c, msg)
-	} else {
+	default:
 		logrus.Debugf("Engine recv noExist msg-%s:%s", msg.Head.Command, string(msg.Body))
 	}
-	return nil
 }
 func (c *Engine) Send(cmd string, body []byte, args ...utils.Map) error {
 	msg := messages.NewMessageBox(cmd)
@@ -396,7 +412,7 @@ func (c *Engine) SendReply(m *messages.MessageBox, stat string, body ...interfac
 	if m == nil || m.Head == nil || m.Head.Id == "" {
 		return errors.New("msg err")
 	}
-	msg := messages.NewMessageBox(messages.MsgCmdReply, utils.Map{
+	msg := messages.NewMessageBox(messages.CmdReply, utils.Map{
 		"mid":    m.Head.Id,
 		"status": stat,
 	})

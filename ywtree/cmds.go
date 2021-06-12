@@ -1,31 +1,47 @@
 package ywtree
 
 import (
+	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
 	"github.com/sirupsen/logrus"
 	"github.com/yggworldtree/go-core/bean"
 	"github.com/yggworldtree/go-core/messages"
-	"github.com/yggworldtree/go-core/utils"
 )
 
-type mpCliFun func(cli *Engine, msg *messages.MessageBox)
-
-var mpCliFn = map[string]mpCliFun{
-	messages.MsgCmdTopicGet: onTopicGet,
-}
-
-func onTopicGet(cli *Engine, msg *messages.MessageBox) {
-	tp, ok := msg.Head.Args["topicPath"]
-	if !ok {
+func (c *Engine) onTopicGet(msg *messages.MessageBox) {
+	tph := msg.Head.Args.GetString("topicPath")
+	if tph == "" {
 		logrus.Debugf("onTopicGet param err1")
 		return
 	}
-	tph := utils.NewMaps(tp)
-	pth := bean.NewTopicPath(tph.GetString("nameSpace"), tph.GetString("key"), tph.GetString("tag"))
-	if pth.NameSpace == "" || pth.Key == "" {
-		logrus.Debugf("onTopicGet param err2")
+	pth, err := bean.ParseTopicPath(tph)
+	//tph := utils.NewMaps(tp)
+	//pth := bean.NewTopicPath(tph.GetString("nameSpace"), tph.GetString("key"), tph.GetString("tag"))
+	if err != nil {
+		logrus.Debugf("onTopicGet param err2:" + err.Error())
 		return
 	}
-	if cli.lsr != nil {
-		cli.lsr.OnMessage(cli, pth, msg.Body)
+	if c.lsr != nil {
+		c.lsr.OnMessage(c, pth, msg.Body)
 	}
+}
+func (c *Engine) onNetConnect(msg *messages.MessageBox) {
+	code := msg.Head.Args.GetString("code")
+	if code == "" {
+		logrus.Debugf("onNetConnect param err1")
+		return
+	}
+	req := c.newHbtpReq("GrpcClientRes")
+	defer req.Close()
+	req.ReqHeader().Set("code", code)
+	err := req.Do(c.ctx, nil)
+	if err != nil {
+		logrus.Debugf("onTopicGet param err2:" + err.Error())
+		return
+	}
+	if req.ResCode() != hbtp.ResStatusOk {
+		logrus.Debugf("onNetConnect server err(%d):%s",
+			req.ResCode(), string(req.ResBodyBytes()))
+		return
+	}
+	go c.netHandleConn(req.Conn(true))
 }
