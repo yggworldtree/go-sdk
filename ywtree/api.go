@@ -22,25 +22,23 @@ func (c *Engine) SubTopic(pars []*bean.TopicInfo) error {
 	return nil
 }
 func (c *Engine) PushTopic(pth *bean.TopicPath,
-	data interface{}, pars ...*bean.TopicParam) error {
+	data interface{}, hd ...interface{}) error {
 	if pth == nil {
 		return errors.New("param err")
 	}
 	/*if len(data)>common.MaxTopicLen{
 		return fmt.Errorf("topic data length out over:%d",common.MaxTopicLen)
 	}*/
-	hd := hbtp.Map{"topicPath": pth.String()}
-	if len(pars) > 0 {
-		hd["type"] = pars[0].Type
-	}
-	code, bts, err := c.doHbtpString("PushTopic", data, hd)
+	req := c.newHbtpReq("PushTopic")
+	defer req.Close()
+	req.SetArg("topicPath", pth.String())
+	err := req.Do(c.ctx, data, hd)
 	if err != nil {
 		return err
 	}
-	if code != hbtp.ResStatusOk {
-		return fmt.Errorf("server err(%d):%s", code, string(bts))
+	if req.ResCode() != hbtp.ResStatusOk {
+		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
 	}
-	//logrus.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
 	return nil
 }
 func (c *Engine) GroupClients(org, name string) ([]*bean.GroupClients, error) {

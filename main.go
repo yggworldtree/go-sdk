@@ -66,11 +66,12 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 func (c *TmpLsr) OnDisconnect(egn *ywtree.Engine) {
 
 }
-func (c *TmpLsr) OnMessage(egn *ywtree.Engine, pth *bean.TopicPath, data []byte) {
-	logrus.Debugf("OnMessage:%s", pth.String())
-	switch pth.String() {
+func (c *TmpLsr) OnMessage(egn *ywtree.Engine, msg *ywtree.MessageTopic) {
+	pths := msg.Path.String()
+	logrus.Debugf("OnMessage:%s,from:%s", pths, msg.Sender.String())
+	switch pths {
 	case bean.NewTopicPath("mgr", "cpu_info").String():
-		logrus.Debugf("OnMessage data:%s", string(data))
+		logrus.Debugf("OnMessage data:%s", string(msg.Body))
 	}
 }
 func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine) {}

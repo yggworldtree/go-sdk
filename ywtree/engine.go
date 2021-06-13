@@ -344,6 +344,9 @@ func (c *Engine) Sends(msg *messages.MessageBox) error {
 	if msg.Info.Id == "" {
 		msg.Info.Id = utils.NewXid()
 	}
+	if msg.Info.Sender == "" {
+		msg.Info.Sender = c.info.CliGroupPath().String()
+	}
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
