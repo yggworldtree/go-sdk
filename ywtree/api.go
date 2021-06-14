@@ -43,15 +43,14 @@ func (c *Engine) UnSubTopic(pars []*bean.TopicPath) error {
 }
 func (c *Engine) PushTopic(pth *bean.TopicPath,
 	data interface{}, hd ...interface{}) error {
-	if pth == nil {
-		return errors.New("param err")
-	}
 	/*if len(data)>common.MaxTopicLen{
 		return fmt.Errorf("topic data length out over:%d",common.MaxTopicLen)
 	}*/
 	req := c.newHbtpReq("PushTopic")
 	defer req.Close()
-	req.SetArg("topicPath", pth.String())
+	if pth != nil {
+		req.SetArg("topicPath", pth.String())
+	}
 	err := req.Do(c.ctx, data, hd)
 	if err != nil {
 		return err

@@ -77,7 +77,9 @@ func (c *TmpLsr) OnMessage(egn *ywtree.Engine, msg *ywtree.MessageTopic) {
 		logrus.Debugf("OnMessage data:%s", string(msg.Body))
 	}
 }
-func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine) {}
+func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine, msg *ywtree.MessageTopic) {
+
+}
 
 func testFun(c *hbtp.Context) {
 	code := c.ReqHeader().GetString("code")

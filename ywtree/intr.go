@@ -4,5 +4,5 @@ type IYWTListener interface {
 	OnConnect(c *Engine)
 	OnDisconnect(c *Engine)
 	OnMessage(c *Engine, msg *MessageTopic)
-	OnBroadcast(c *Engine)
+	OnBroadcast(c *Engine, msg *MessageTopic)
 }
