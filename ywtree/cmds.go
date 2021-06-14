@@ -33,7 +33,7 @@ func (c *Engine) onTopicGet(msg *messages.MessageBox) *messages.ReplyInfo {
 		}
 	}
 	if c.lsr != nil {
-		c.lsr.OnMessage(c, m)
+		return c.lsr.OnMessage(c, m)
 	}
 	return nil
 }

@@ -316,6 +316,10 @@ func (c *Engine) onMsg(msg *messages.MessageBox) {
 		msg.Info.Flags &= 0x00
 		c.onReply(msg)
 	default:
+		bc := msg.Info.Flags & 0x02
+		if bc != 0 && c.lsr != nil {
+			rinfo = c.lsr.OnBroadcast(c, msg)
+		}
 		logrus.Debugf("Engine recv noExist msg-%s:%s", msg.Info.Command, string(msg.Body))
 	}
 	needReply := msg.Info.Flags & 0x01

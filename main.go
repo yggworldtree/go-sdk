@@ -4,6 +4,7 @@ import (
 	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
 	"github.com/sirupsen/logrus"
 	"github.com/yggworldtree/go-core/bean"
+	"github.com/yggworldtree/go-core/messages"
 	"github.com/yggworldtree/go-sdk/ywtree"
 	"time"
 )
@@ -69,16 +70,19 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 func (c *TmpLsr) OnDisconnect(egn *ywtree.Engine) {
 
 }
-func (c *TmpLsr) OnMessage(egn *ywtree.Engine, msg *ywtree.MessageTopic) {
+func (c *TmpLsr) OnMessage(egn *ywtree.Engine, msg *ywtree.MessageTopic) *messages.ReplyInfo {
 	pths := msg.Path.String()
 	logrus.Debugf("OnMessage:%s,from:%s", pths, msg.Sender.String())
 	switch pths {
 	case bean.NewTopicPath("mgr", "cpu_info").String():
 		logrus.Debugf("OnMessage data:%s", string(msg.Body))
 	}
-}
-func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine, msg *ywtree.MessageTopic) {
 
+	return nil
+}
+func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine, msg *messages.MessageBox) *messages.ReplyInfo {
+
+	return nil
 }
 
 func testFun(c *hbtp.Context) {
