@@ -21,6 +21,25 @@ func (c *Engine) SubTopic(pars []*bean.TopicInfo) error {
 	//logrus.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
 	return nil
 }
+func (c *Engine) UnSubTopic(pth *bean.TopicPath) error {
+	if pth == nil {
+		return errors.New("param err")
+	}
+	/*if len(data)>common.MaxTopicLen{
+		return fmt.Errorf("topic data length out over:%d",common.MaxTopicLen)
+	}*/
+	req := c.newHbtpReq("UnSubTopic")
+	defer req.Close()
+	req.SetArg("topicPath", pth.String())
+	err := req.Do(c.ctx, nil, nil)
+	if err != nil {
+		return err
+	}
+	if req.ResCode() != hbtp.ResStatusOk {
+		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
+	}
+	return nil
+}
 func (c *Engine) PushTopic(pth *bean.TopicPath,
 	data interface{}, hd ...interface{}) error {
 	if pth == nil {

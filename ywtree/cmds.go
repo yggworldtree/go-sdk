@@ -24,18 +24,18 @@ func (c *MessageTopic) Header() *utils.Map {
 	return c.header
 }
 
-func (c *Engine) onTopicGet(msg *messages.MessageBox) {
+func (c *Engine) onTopicGet(msg *messages.MessageBox) *messages.ReplyInfo {
 	tph := msg.Info.Args.Get("topicPath")
 	if tph == "" {
 		logrus.Debugf("onTopicGet param err1")
-		return
+		return nil
 	}
 	pth, err := bean.ParseTopicPath(tph)
 	//tph := utils.NewMaps(tp)
 	//pth := bean.NewTopicPath(tph.GetString("nameSpace"), tph.GetString("key"), tph.GetString("tag"))
 	if err != nil {
 		logrus.Debugf("onTopicGet param err2:" + err.Error())
-		return
+		return nil
 	}
 	m := &MessageTopic{
 		Id:   msg.Info.Id,
@@ -52,12 +52,13 @@ func (c *Engine) onTopicGet(msg *messages.MessageBox) {
 	if c.lsr != nil {
 		c.lsr.OnMessage(c, m)
 	}
+	return nil
 }
-func (c *Engine) onNetConnect(msg *messages.MessageBox) {
+func (c *Engine) onNetConnect(msg *messages.MessageBox) *messages.ReplyInfo {
 	code := msg.Info.Args.Get("code")
 	if code == "" {
 		logrus.Debugf("onNetConnect param err1")
-		return
+		return nil
 	}
 	req := c.newHbtpReq("GrpcClientRes")
 	defer req.Close()
@@ -65,12 +66,13 @@ func (c *Engine) onNetConnect(msg *messages.MessageBox) {
 	err := req.Do(c.ctx, nil)
 	if err != nil {
 		logrus.Debugf("onTopicGet param err2:" + err.Error())
-		return
+		return nil
 	}
 	if req.ResCode() != hbtp.ResStatusOk {
 		logrus.Debugf("onNetConnect server err(%d):%s",
 			req.ResCode(), string(req.ResBodyBytes()))
-		return
+		return nil
 	}
 	go c.netHandleConn(req.Conn(true))
+	return nil
 }

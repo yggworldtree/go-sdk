@@ -11,6 +11,7 @@ import (
 var egn *ywtree.Engine
 
 func main() {
+	hbtp.Debug = true
 	logrus.SetLevel(logrus.DebugLevel)
 	println("this is test for sdk")
 	egn = ywtree.NewEngine(nil, &TmpLsr{}, &ywtree.Config{
@@ -28,10 +29,11 @@ func main() {
 type TmpLsr struct{}
 
 func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
+	pthCpu := bean.NewTopicPath("mgr", "cpu_info")
 	egn.SubTopic([]*bean.TopicInfo{
 		{
-			Path:  bean.NewTopicPath("mgr", "cpu_info"),
-			Safed: false,
+			Path:  pthCpu.String(),
+			Safed: true,
 		},
 	})
 	go func() {
@@ -43,10 +45,11 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 				logrus.Debugf("GroupClients cli[%d]:%s/%s:%s(%s),", i, v.Org, v.Name, v.Alias, v.Id)
 			}
 		}
-		egn.PushTopic(bean.NewTopicPath("mgr", "cpu_info"), []byte("第一次发送"))
+		egn.PushTopic(pthCpu, []byte("第一次发送"))
 		time.Sleep(time.Second * 3)
+		//egn.UnSubTopic(pthCpu)
 		logrus.Debugf("PushTopic!!!!!!!!!!!!!!!")
-		egn.PushTopic(bean.NewTopicPath("mgr", "cpu_info"), []byte("第二次发送"))
+		egn.PushTopic(pthCpu, []byte("第二次发送"))
 		logrus.Debugf("HbtpGrpcRequest!!!!!!!!!!!!!!!")
 		req, err := egn.HbtpGrpcRequest(bean.NewCliGroupPath("mgr", "test"), 1, "")
 		if err != nil {

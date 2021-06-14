@@ -199,13 +199,14 @@ func (c *Engine) run() (rterr error) {
 		}
 	} else if time.Since(c.htms).Seconds() > 10 {
 		c.htms = time.Now()
-		messages.NewReplyCallback(c, messages.NewMessageBox(messages.CmdHeart)).
-			/*Ok(func(c messages.IEngine, m *messages.MessageBox) {
+		rc := messages.NewReplyCallback(c, messages.NewMessageBox(messages.CmdHeart))
+		rc. /*Ok(func(c messages.IEngine, m *messages.MessageBox) {
 				logrus.Debugf("heart msg callback:%s!!!!!", m.Info.Id)
 			}).*/
 			Err(func(c messages.IEngine, errs error) {
 				logrus.Debugf("heart msg callback errs:%v!!!!!", errs)
-			}).Exec()
+			})
+		rc.Exec()
 	} else if time.Since(c.htmr).Seconds() > 32 {
 		c.close()
 		time.Sleep(time.Second * 1)
@@ -305,31 +306,43 @@ func (c *Engine) onMsg(msg *messages.MessageBox) {
 		}
 	}()
 
+	var rinfo *messages.ReplyInfo
 	switch msg.Info.Command {
 	case messages.CmdTopicGet:
-		c.onTopicGet(msg)
+		rinfo = c.onTopicGet(msg)
 	case messages.CmdNetConnect:
-		c.onNetConnect(msg)
+		rinfo = c.onNetConnect(msg)
 	case messages.CmdReply:
-		mid := msg.Info.Args.Get("mid")
-		if mid == "" {
-			logrus.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
-			return
-		}
-		c.replylk.Lock()
-		e, ok := c.replymp[mid]
-		delete(c.replymp, mid)
-		c.replylk.Unlock()
-		if !ok {
-			logrus.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
-			return
-		}
-		fn := e.OkFun()
-		if fn != nil {
-			fn(c, msg)
-		}
+		msg.Info.Flags &= 0x00
+		c.onReply(msg)
 	default:
 		logrus.Debugf("Engine recv noExist msg-%s:%s", msg.Info.Command, string(msg.Body))
+	}
+	needReply := msg.Info.Flags & 0x01
+	if rinfo != nil {
+		c.SendReply(msg, rinfo)
+	} else if needReply != 0 {
+		c.SendReply(msg, messages.NewReplyInfo("unknown"))
+	}
+}
+func (c *Engine) onReply(msg *messages.MessageBox) {
+	mid := msg.Info.Args.Get("mid")
+	status := msg.Info.Args.Get("status")
+	if mid == "" {
+		logrus.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
+		return
+	}
+	c.replylk.Lock()
+	e, ok := c.replymp[mid]
+	delete(c.replymp, mid)
+	c.replylk.Unlock()
+	if !ok {
+		logrus.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
+		return
+	}
+	fn := e.OkFun()
+	if fn != nil {
+		fn(c, messages.NewReplyInfo(status, msg.Body, msg.Head))
 	}
 }
 func (c *Engine) Send(cmd string, body []byte, args ...url.Values) error {
@@ -357,16 +370,19 @@ func (c *Engine) Sends(msg *messages.MessageBox) error {
 	}()
 	return nil
 }
-func (c *Engine) SendReply(m *messages.MessageBox, stat string, body ...interface{}) error {
+func (c *Engine) SendReply(m *messages.MessageBox, info *messages.ReplyInfo) error {
 	if m == nil || m.Info == nil || m.Info.Id == "" {
 		return errors.New("msg err")
 	}
 	pars := url.Values{}
 	pars.Set("mid", m.Info.Id)
-	pars.Set("status", stat)
+	pars.Set("status", info.Status)
 	msg := messages.NewMessageBox(messages.CmdReply, pars)
-	if len(body) > 0 {
-		msg.PutBody(body[0])
+	if info.Head != nil {
+		msg.PutBody(info.Head)
+	}
+	if info.Body != nil {
+		msg.PutBody(info.Body)
 	}
 	return c.Sends(msg)
 }
@@ -375,6 +391,7 @@ func (c *Engine) SendForReply(e messages.IReply) error {
 	if msg == nil || msg.Info == nil || msg.Info.Id != "" {
 		return errors.New("msg id err")
 	}
+	msg.Info.Flags |= 0x01
 	err := c.Sends(msg)
 	if err != nil {
 		return err
