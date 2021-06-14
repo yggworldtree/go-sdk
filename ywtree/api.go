@@ -21,8 +21,8 @@ func (c *Engine) SubTopic(pars []*bean.TopicInfo) error {
 	//logrus.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
 	return nil
 }
-func (c *Engine) UnSubTopic(pth *bean.TopicPath) error {
-	if pth == nil {
+func (c *Engine) UnSubTopic(pars []*bean.TopicPath) error {
+	if pars == nil || len(pars) <= 0 {
 		return errors.New("param err")
 	}
 	/*if len(data)>common.MaxTopicLen{
@@ -30,8 +30,9 @@ func (c *Engine) UnSubTopic(pth *bean.TopicPath) error {
 	}*/
 	req := c.newHbtpReq("UnSubTopic")
 	defer req.Close()
-	req.SetArg("topicPath", pth.String())
-	err := req.Do(c.ctx, nil, nil)
+	err := req.Do(c.ctx, &bean.ClientUnSubTopic{
+		Topics: pars,
+	})
 	if err != nil {
 		return err
 	}

@@ -33,7 +33,7 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 	egn.SubTopic([]*bean.TopicInfo{
 		{
 			Path:  pthCpu.String(),
-			Safed: true,
+			Safed: false,
 		},
 	})
 	go func() {
