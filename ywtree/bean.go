@@ -6,11 +6,11 @@ import (
 )
 
 type MessageTopic struct {
-	Id     string             `json:"id,omitempty"`
-	Path   *bean.TopicPath    `json:"path,omitempty"`
-	Sender *bean.CliGroupPath `json:"sender,omitempty"`
-	Head   []byte             `json:"head,omitempty"`
-	Body   []byte             `json:"body,omitempty"`
+	Id     string             `json:"id"`
+	Path   *bean.TopicPath    `json:"path"`
+	Sender *bean.CliGroupPath `json:"sender"`
+	Head   []byte             `json:"head"`
+	Body   []byte             `json:"body"`
 	header *utils.Map
 }
 

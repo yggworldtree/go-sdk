@@ -1,8 +1,9 @@
 package ywtree
 
 type Config struct {
-	Host  string `json:"host,omitempty"`
-	Org   string `json:"org,omitempty"`
-	Name  string `json:"name,omitempty"`
-	Alias string `json:"alias,omitempty"`
+	Host  string `json:"host"`
+	Org   string `json:"org"`
+	Name  string `json:"name"`
+	Alias string `json:"alias"`
+	Sign  string `json:"sign"`
 }

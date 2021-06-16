@@ -85,7 +85,6 @@ func (c *TmpLsr) OnMessage(egn *ywtree.Engine, msg *ywtree.MessageTopic) *messag
 	return nil
 }
 func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine, msg *messages.MessageBox) *messages.ReplyInfo {
-
 	return nil
 }
 

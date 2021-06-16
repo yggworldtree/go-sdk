@@ -146,6 +146,7 @@ func (c *Engine) reg() error {
 		Org:   c.cfg.Org,
 		Name:  c.cfg.Name,
 		Alias: c.info.Alias,
+		Sign:  c.cfg.Sign,
 	})
 	if err != nil {
 		return err
