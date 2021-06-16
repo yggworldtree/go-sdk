@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	RPCHostCode = 1
+	RPCHostCode = 10
 )
 
 func (c *Engine) newHbtpReq(method string, tmots ...time.Duration) *hbtp.Request {
