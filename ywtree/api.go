@@ -73,7 +73,7 @@ func (c *Engine) HbtpGrpcRequest(pth *bean.CliGroupPath,
 	control int32, cmd string, args ...url.Values) (*hbtp.Request, error) {
 	req := c.newHbtpReq("GrpcClientReq")
 	defer req.Close()
-	req.ReqHeader().Set("cliPath", pth.String())
+	req.SetArg("cliPath", pth.String())
 	err := req.Do(c.ctx, nil)
 	if err != nil {
 		return nil, err
@@ -88,4 +88,83 @@ func (c *Engine) HbtpGrpcRequest(pth *bean.CliGroupPath,
 		rtq.Args(args[0])
 	}
 	return rtq, nil
+}
+
+func (c *Engine) CreateBucket(bucket string) error {
+	if bucket == "" {
+		return errors.New("param err")
+	}
+	/*if len(data)>common.MaxTopicLen{
+		return fmt.Errorf("topic data length out over:%d",common.MaxTopicLen)
+	}*/
+	req := c.newHbtpReq("CreateBucket")
+	defer req.Close()
+	req.SetArg("bucket", bucket)
+	err := req.Do(c.ctx, nil)
+	if err != nil {
+		return err
+	}
+	if req.ResCode() != hbtp.ResStatusOk {
+		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
+	}
+	return nil
+}
+func (c *Engine) DeleteBucket(bucket string) error {
+	if bucket == "" {
+		return errors.New("param err")
+	}
+	/*if len(data)>common.MaxTopicLen{
+		return fmt.Errorf("topic data length out over:%d",common.MaxTopicLen)
+	}*/
+	req := c.newHbtpReq("DeleteBucket")
+	defer req.Close()
+	req.SetArg("bucket", bucket)
+	err := req.Do(c.ctx, nil)
+	if err != nil {
+		return err
+	}
+	if req.ResCode() != hbtp.ResStatusOk {
+		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
+	}
+	return nil
+}
+func (c *Engine) SetBucketParam(bucket, key string, data []byte) error {
+	if bucket == "" || key == "" {
+		return errors.New("param err")
+	}
+	/*if len(data)>common.MaxTopicLen{
+		return fmt.Errorf("topic data length out over:%d",common.MaxTopicLen)
+	}*/
+	req := c.newHbtpReq("SetBucketParam")
+	defer req.Close()
+	req.SetArg("bucket", bucket)
+	req.SetArg("key", key)
+	err := req.Do(c.ctx, data)
+	if err != nil {
+		return err
+	}
+	if req.ResCode() != hbtp.ResStatusOk {
+		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
+	}
+	return nil
+}
+func (c *Engine) GetBucketParam(bucket, key string) ([]byte, error) {
+	if bucket == "" || key == "" {
+		return nil, errors.New("param err")
+	}
+	/*if len(data)>common.MaxTopicLen{
+		return fmt.Errorf("topic data length out over:%d",common.MaxTopicLen)
+	}*/
+	req := c.newHbtpReq("GetBucketParam")
+	defer req.Close()
+	req.SetArg("bucket", bucket)
+	req.SetArg("key", key)
+	err := req.Do(c.ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	if req.ResCode() != hbtp.ResStatusOk {
+		return nil, fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
+	}
+	return req.ResBodyBytes(), nil
 }

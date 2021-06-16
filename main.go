@@ -44,8 +44,14 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 				hbtp.Debugf("GroupClients cli[%d]:%s/%s:%s(%s),", i, v.Org, v.Name, v.Alias, v.Id)
 			}
 		}
+		egn.CreateBucket("test")
+		egn.SetBucketParam("test", "sends", []byte("第一次发送s"))
 		egn.PushTopic(pthCpu, []byte("第一次发送"))
 		time.Sleep(time.Second * 3)
+		bts, err := egn.GetBucketParam("test", "sends")
+		if err == nil {
+			hbtp.Debugf("bucket get test/sends:%s", string(bts))
+		}
 		//egn.UnSubTopic(pthCpu)
 		hbtp.Debugf("PushTopic!!!!!!!!!!!!!!!")
 		egn.PushTopic(pthCpu, []byte("第二次发送"))

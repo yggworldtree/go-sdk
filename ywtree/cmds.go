@@ -44,7 +44,7 @@ func (c *Engine) onNetConnect(msg *messages.MessageBox) *messages.ReplyInfo {
 	}
 	req := c.newHbtpReq("GrpcClientRes")
 	defer req.Close()
-	req.ReqHeader().Set("code", code)
+	req.SetArg("code", code)
 	err := req.Do(c.ctx, nil)
 	if err != nil {
 		hbtp.Debugf("onTopicGet param err2:" + err.Error())
