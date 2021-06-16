@@ -2,7 +2,6 @@ package main
 
 import (
 	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
-	"github.com/sirupsen/logrus"
 	"github.com/yggworldtree/go-core/bean"
 	"github.com/yggworldtree/go-core/messages"
 	"github.com/yggworldtree/go-sdk/ywtree"
@@ -13,7 +12,6 @@ var egn *ywtree.Engine
 
 func main() {
 	hbtp.Debug = true
-	logrus.SetLevel(logrus.DebugLevel)
 	println("this is test for sdk")
 	egn = ywtree.NewEngine(nil, &TmpLsr{}, &ywtree.Config{
 		Host: "localhost:7000",
@@ -40,31 +38,31 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 	go func() {
 		ls, err := egn.GroupClients("mgr", "test")
 		if err != nil {
-			logrus.Debugf("GroupClients err:%v", err)
+			hbtp.Debugf("GroupClients err:%v", err)
 		} else {
 			for i, v := range ls {
-				logrus.Debugf("GroupClients cli[%d]:%s/%s:%s(%s),", i, v.Org, v.Name, v.Alias, v.Id)
+				hbtp.Debugf("GroupClients cli[%d]:%s/%s:%s(%s),", i, v.Org, v.Name, v.Alias, v.Id)
 			}
 		}
 		egn.PushTopic(pthCpu, []byte("第一次发送"))
 		time.Sleep(time.Second * 3)
 		//egn.UnSubTopic(pthCpu)
-		logrus.Debugf("PushTopic!!!!!!!!!!!!!!!")
+		hbtp.Debugf("PushTopic!!!!!!!!!!!!!!!")
 		egn.PushTopic(pthCpu, []byte("第二次发送"))
-		logrus.Debugf("HbtpGrpcRequest!!!!!!!!!!!!!!!")
+		hbtp.Debugf("HbtpGrpcRequest!!!!!!!!!!!!!!!")
 		req, err := egn.HbtpGrpcRequest(bean.NewCliGroupPath("mgr", "test"), 1, "")
 		if err != nil {
-			logrus.Debugf("HbtpGrpcRequest err:%v", err)
+			hbtp.Debugf("HbtpGrpcRequest err:%v", err)
 			return
 		}
 		defer req.Close()
 		req.ReqHeader().Set("code", "1234567")
 		err = req.Do(nil, nil)
 		if err != nil {
-			logrus.Debugf("HbtpGrpcRequest do err:%v", err)
+			hbtp.Debugf("HbtpGrpcRequest do err:%v", err)
 			return
 		}
-		logrus.Debugf("HbtpGrpcRequest res(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
+		hbtp.Debugf("HbtpGrpcRequest res(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
 	}()
 }
 func (c *TmpLsr) OnDisconnect(egn *ywtree.Engine) {
@@ -72,10 +70,10 @@ func (c *TmpLsr) OnDisconnect(egn *ywtree.Engine) {
 }
 func (c *TmpLsr) OnMessage(egn *ywtree.Engine, msg *ywtree.MessageTopic) *messages.ReplyInfo {
 	pths := msg.Path.String()
-	logrus.Debugf("OnMessage:%s,from:%s", pths, msg.Sender.String())
+	hbtp.Debugf("OnMessage:%s,from:%s", pths, msg.Sender.String())
 	switch pths {
 	case bean.NewTopicPath("mgr", "cpu_info").String():
-		logrus.Debugf("OnMessage data:%s", string(msg.Body))
+		hbtp.Debugf("OnMessage data:%s", string(msg.Body))
 	}
 
 	return nil
@@ -87,6 +85,6 @@ func (c *TmpLsr) OnBroadcast(egn *ywtree.Engine, msg *messages.MessageBox) *mess
 
 func testFun(c *hbtp.Context) {
 	code := c.ReqHeader().GetString("code")
-	logrus.Debugf("grpc testFun code:%s", code)
+	hbtp.Debugf("grpc testFun code:%s", code)
 	c.ResString(hbtp.ResStatusOk, egn.Alias()+":ok")
 }

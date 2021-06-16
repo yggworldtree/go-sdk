@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
-	"github.com/sirupsen/logrus"
 	"github.com/yggworldtree/go-core/bean"
 	"github.com/yggworldtree/go-core/messages"
 	"github.com/yggworldtree/go-core/utils"
@@ -95,7 +94,7 @@ func (c *Engine) Run() error {
 	go func() {
 		for !utils.EndContext(c.ctx) {
 			if err := c.runRead(); err != nil {
-				logrus.Errorf("Client runRead err(end):%v", err)
+				hbtp.Debugf("Client runRead err(end):%v", err)
 				c.close()
 			}
 		}
@@ -109,14 +108,14 @@ func (c *Engine) Run() error {
 		for !utils.EndContext(c.ctx) {
 			err := c.runRecv()
 			if err != nil {
-				logrus.Errorf("Engine runRecv err(end):%v", err)
+				hbtp.Debugf("Engine runRecv err(end):%v", err)
 			}
 		}
 	}()
 	for !utils.EndContext(c.ctx) {
 		err := c.run()
 		if err != nil {
-			logrus.Errorf("Engine run err(end):%v", err)
+			hbtp.Debugf("Engine run err(end):%v", err)
 			//return err
 		}
 		time.Sleep(time.Millisecond * 100)
@@ -173,8 +172,8 @@ func (c *Engine) run() (rterr error) {
 	defer func() {
 		if err := recover(); err != nil {
 			rterr = fmt.Errorf("recover:%v", rterr)
-			logrus.Errorf("Engine run recover:%+v", err)
-			logrus.Errorf("%s", string(debug.Stack()))
+			hbtp.Debugf("Engine run recover:%+v", err)
+			hbtp.Debugf("%s", string(debug.Stack()))
 		}
 	}()
 
@@ -184,15 +183,15 @@ func (c *Engine) run() (rterr error) {
 			case *net.OpError:
 				operr := err.(*net.OpError)
 				if !strings.Contains(comm.MainCfg.ServAddr, "server:") && !operr.Timeout() {
-					logrus.Errorf("register server(%s) failed:%v", comm.MainCfg.ServAddr, err)
+					hbtp.Debugf("register server(%s) failed:%v", comm.MainCfg.ServAddr, err)
 				}
 			default:
-				logrus.Errorf("register servers(%s) failed:%v", comm.MainCfg.ServAddr, err)
+				hbtp.Debugf("register servers(%s) failed:%v", comm.MainCfg.ServAddr, err)
 			}*/
-			logrus.Errorf("register servers(%s) failed:%v", c.cfg.Host, err)
+			hbtp.Debugf("register servers(%s) failed:%v", c.cfg.Host, err)
 			time.Sleep(time.Second * 3)
 		} else {
-			logrus.Infof("register runner suceess!id:%s,alias:%s", c.info.Id, c.info.Alias)
+			hbtp.Debugf("register runner suceess!id:%s,alias:%s", c.info.Id, c.info.Alias)
 			if c.lsr != nil {
 				c.lsr.OnConnect(c)
 			}
@@ -201,10 +200,10 @@ func (c *Engine) run() (rterr error) {
 		c.htms = time.Now()
 		rc := messages.NewReplyCallback(c, messages.NewMessageBox(messages.CmdHeart))
 		rc. /*Ok(func(c messages.IEngine, m *messages.MessageBox) {
-				logrus.Debugf("heart msg callback:%s!!!!!", m.Info.Id)
+				hbtp.Debugf("heart msg callback:%s!!!!!", m.Info.Id)
 			}).*/
 			Err(func(c messages.IEngine, errs error) {
-				logrus.Debugf("heart msg callback errs:%v!!!!!", errs)
+				hbtp.Debugf("heart msg callback errs:%v!!!!!", errs)
 			})
 		rc.Exec()
 	} else if time.Since(c.htmr).Seconds() > 32 {
@@ -218,8 +217,8 @@ func (c *Engine) run() (rterr error) {
 func (c *Engine) runRead() error {
 	defer func() {
 		if err := recover(); err != nil {
-			logrus.Errorf("Engine runRead recover:%+v", err)
-			logrus.Errorf("%s", string(debug.Stack()))
+			hbtp.Debugf("Engine runRead recover:%+v", err)
+			hbtp.Debugf("%s", string(debug.Stack()))
 		}
 	}()
 	conn := c.conn
@@ -233,7 +232,7 @@ func (c *Engine) runRead() error {
 		return err
 	}
 	if bts[0] != 0x8d {
-		logrus.Error("Client runRead 0x8d what????")
+		hbtp.Debugf("Client runRead 0x8d what????")
 		return nil
 	}
 	bts, err = hbtp.TcpRead(c.ctx, conn, 1)
@@ -241,7 +240,7 @@ func (c *Engine) runRead() error {
 		return err
 	}
 	if bts[0] != 0x8f {
-		logrus.Error("Client runRead 0x8f what????")
+		hbtp.Debugf("Client runRead 0x8f what????")
 		return nil
 	}
 	msg, err := messages.ReadMessageBox(c.ctx, conn, &c.hbtpconf)
@@ -261,8 +260,8 @@ func (c *Engine) runRead() error {
 func (c *Engine) runWrite() {
 	defer func() {
 		if err := recover(); err != nil {
-			logrus.Errorf("Engine runWrite recover:%+v", err)
-			logrus.Errorf("%s", string(debug.Stack()))
+			hbtp.Debugf("Engine runWrite recover:%+v", err)
+			hbtp.Debugf("%s", string(debug.Stack()))
 		}
 	}()
 
@@ -282,8 +281,8 @@ func (c *Engine) runRecv() (rterr error) {
 	defer func() {
 		if err := recover(); err != nil {
 			rterr = fmt.Errorf("recover:%v", rterr)
-			logrus.Errorf("Engine run recover:%+v", err)
-			logrus.Errorf("%s", string(debug.Stack()))
+			hbtp.Debugf("Engine run recover:%+v", err)
+			hbtp.Debugf("%s", string(debug.Stack()))
 		}
 	}()
 
@@ -301,8 +300,8 @@ func (c *Engine) runRecv() (rterr error) {
 func (c *Engine) onMsg(msg *messages.MessageBox) {
 	defer func() {
 		if err := recover(); err != nil {
-			logrus.Errorf("Engine onMsg recover:%+v", err)
-			logrus.Errorf("%s", string(debug.Stack()))
+			hbtp.Debugf("Engine onMsg recover:%+v", err)
+			hbtp.Debugf("%s", string(debug.Stack()))
 		}
 	}()
 
@@ -320,7 +319,7 @@ func (c *Engine) onMsg(msg *messages.MessageBox) {
 		if bc != 0 && c.lsr != nil {
 			rinfo = c.lsr.OnBroadcast(c, msg)
 		}
-		logrus.Debugf("Engine recv noExist msg-%s:%s", msg.Info.Command, string(msg.Body))
+		hbtp.Debugf("Engine recv noExist msg-%s:%s", msg.Info.Command, string(msg.Body))
 	}
 	needReply := msg.Info.Flags & 0x01
 	if rinfo != nil {
@@ -333,7 +332,7 @@ func (c *Engine) onReply(msg *messages.MessageBox) {
 	mid := msg.Info.Args.Get("mid")
 	status := msg.Info.Args.Get("status")
 	if mid == "" {
-		logrus.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
+		hbtp.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
 		return
 	}
 	c.replylk.Lock()
@@ -341,7 +340,7 @@ func (c *Engine) onReply(msg *messages.MessageBox) {
 	delete(c.replymp, mid)
 	c.replylk.Unlock()
 	if !ok {
-		logrus.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
+		hbtp.Debugf("recv msg-%s err: mid empty", msg.Info.Command)
 		return
 	}
 	fn := e.OkFun()
@@ -367,7 +366,7 @@ func (c *Engine) Sends(msg *messages.MessageBox) error {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				logrus.Errorf("Sends recover:%+v", err)
+				hbtp.Debugf("Sends recover:%+v", err)
 			}
 		}()
 		c.sndch <- msg

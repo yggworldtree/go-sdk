@@ -18,7 +18,7 @@ func (c *Engine) SubTopic(pars []*bean.TopicInfo) error {
 	if code != hbtp.ResStatusOk {
 		return fmt.Errorf("server err(%d):%s", code, string(bts))
 	}
-	//logrus.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
+	//hbtp.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
 	return nil
 }
 func (c *Engine) UnSubTopic(pars []*bean.TopicPath) error {
