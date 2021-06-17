@@ -1,3 +1,9 @@
 github.com/mgr9525/HyperByte-Transfer-Protocol v1.0.0/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
 github.com/mgr9525/HyperByte-Transfer-Protocol v1.0.1 h1:FJbyJEeDe8Jv3sRAbaFBuugGe1jDRbbsiSElqkWJZGo=
 github.com/mgr9525/HyperByte-Transfer-Protocol v1.0.1/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
+github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.0 h1:2IbEqjfC5gowAiIfCk3/Ufop0MSyOw+GLnpswjClwJQ=
+github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.0/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
+github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.1 h1:9XIbhI4vejkqdUZrPYGM/2EKTTkCKyeYt8NHWnjjcrQ=
+github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.1/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
+github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.2 h1:mzG2mqauBXQ/NqQ4XFogu2CJawyYMvul0HF+7/5sU+c=
+github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.2/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
