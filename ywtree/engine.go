@@ -142,12 +142,13 @@ func (c *Engine) reg() error {
 		c.info.Alias = c.cfg.Alias
 	}
 	err := req.Do(c.ctx, &bean.ClientRegInfo{
-		Id:    c.info.Id,
-		Org:   c.cfg.Org,
-		Name:  c.cfg.Name,
-		Alias: c.info.Alias,
-		Subs:  c.cfg.Subs,
-		Sign:  c.cfg.Sign,
+		Id:      c.info.Id,
+		Org:     c.cfg.Org,
+		Name:    c.cfg.Name,
+		Alias:   c.info.Alias,
+		Subs:    c.cfg.Subs,
+		MaxFreq: c.cfg.MaxFreq,
+		Sign:    c.cfg.Sign,
 	})
 	if err != nil {
 		return err

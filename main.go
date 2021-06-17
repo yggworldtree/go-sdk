@@ -14,10 +14,11 @@ func main() {
 	hbtp.Debug = true
 	println("this is test for sdk")
 	egn = ywtree.NewEngine(nil, &TmpLsr{}, &ywtree.Config{
-		Host: "localhost:7000",
-		Org:  "mgr",
-		Name: "test",
-		Sign: "123456",
+		Host:    "localhost:7000",
+		Org:     "mgr",
+		Name:    "test",
+		Sign:    "123456",
+		MaxFreq: "1s",
 	})
 	egn.RegHbtpFun(1, testFun)
 	err := egn.Run()
@@ -48,6 +49,8 @@ func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 		//egn.CreateBucket("test")
 		//egn.SetBucketParam("test", "sends", []byte("第一次发送s"))
 		egn.PushTopic(pthCpu, []byte("第一次发送"))
+		time.Sleep(time.Millisecond * 500)
+		egn.PushTopic(pthCpu, []byte("第1.2次发送"))
 		time.Sleep(time.Second * 3)
 		bts, err := egn.GetBucketParam("test", "sends")
 		if err == nil {
