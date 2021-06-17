@@ -28,7 +28,7 @@ func main() {
 type TmpLsr struct{}
 
 func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
-	pthCpu := bean.NewTopicPath("mgr", "cpu_info")
+	pthCpu := bean.NewTopicPath("mgr/test", "cpu_info")
 	egn.SubTopic([]*bean.TopicInfo{
 		{
 			Path:  pthCpu.String(),
@@ -78,7 +78,7 @@ func (c *TmpLsr) OnMessage(egn *ywtree.Engine, msg *ywtree.MessageTopic) *messag
 	pths := msg.Path.String()
 	hbtp.Debugf("OnMessage:%s,from:%s", pths, msg.Sender.String())
 	switch pths {
-	case bean.NewTopicPath("mgr", "cpu_info").String():
+	case bean.NewTopicPath("mgr/test", "cpu_info").String():
 		hbtp.Debugf("OnMessage data:%s", string(msg.Body))
 	}
 
