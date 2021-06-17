@@ -7,3 +7,5 @@ github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.1 h1:9XIbhI4vejkqdUZrPYGM/2E
 github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.1/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
 github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.2 h1:mzG2mqauBXQ/NqQ4XFogu2CJawyYMvul0HF+7/5sU+c=
 github.com/mgr9525/HyperByte-Transfer-Protocol v1.1.2/go.mod h1:U2OZ06VD1PHu3ZLZ8tuEHooaOZnoke/4ZKAZfL44bUQ=
+github.com/yggworldtree/go-core v0.0.0-20210617095351-1d4baffdc920 h1:ptGcdo9Pudw2tDrwuBcEU16RAQOw9rgAH08BE+i9M/g=
+github.com/yggworldtree/go-core v0.0.0-20210617095351-1d4baffdc920/go.mod h1:i6BUXV0vow2SYzr04qZJzGOSfSWAQtZunWFp72udCA0=
