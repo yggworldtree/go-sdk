@@ -17,6 +17,7 @@ func main() {
 		Host: "localhost:7000",
 		Org:  "mgr",
 		Name: "test",
+		Sign: "123456",
 	})
 	egn.RegHbtpFun(1, testFun)
 	err := egn.Run()
