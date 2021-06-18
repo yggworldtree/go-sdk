@@ -8,12 +8,21 @@ import (
 	"net/url"
 )
 
+const (
+	DevResCodeNoActive = 103
+)
+
+var ErrNoActive = errors.New("no Active")
+
 func (c *Engine) SubTopic(pars []*bean.TopicInfo) error {
 	code, bts, err := c.doHbtpString("SubTopic", &bean.ClientSubTopic{
 		Topics: pars,
 	})
 	if err != nil {
 		return err
+	}
+	if code == DevResCodeNoActive {
+		return ErrNoActive
 	}
 	if code != hbtp.ResStatusOk {
 		return fmt.Errorf("server err(%d):%s", code, string(bts))
@@ -36,6 +45,9 @@ func (c *Engine) UnSubTopic(pars []*bean.TopicPath) error {
 	if err != nil {
 		return err
 	}
+	if req.ResCode() == DevResCodeNoActive {
+		return ErrNoActive
+	}
 	if req.ResCode() != hbtp.ResStatusOk {
 		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
 	}
@@ -54,6 +66,9 @@ func (c *Engine) PushTopic(pth *bean.TopicPath,
 	err := req.Do(c.ctx, data, hd)
 	if err != nil {
 		return err
+	}
+	if req.ResCode() == DevResCodeNoActive {
+		return ErrNoActive
 	}
 	if req.ResCode() != hbtp.ResStatusOk {
 		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
@@ -77,6 +92,9 @@ func (c *Engine) HbtpGrpcRequest(pth *bean.CliGroupPath,
 	err := req.Do(c.ctx, nil)
 	if err != nil {
 		return nil, err
+	}
+	if req.ResCode() == DevResCodeNoActive {
+		return nil, ErrNoActive
 	}
 	if req.ResCode() != hbtp.ResStatusOk {
 		return nil, fmt.Errorf("server err(%d):%s",
@@ -104,6 +122,9 @@ func (c *Engine) CreateBucket(bucket string) error {
 	if err != nil {
 		return err
 	}
+	if req.ResCode() == DevResCodeNoActive {
+		return ErrNoActive
+	}
 	if req.ResCode() != hbtp.ResStatusOk {
 		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
 	}
@@ -122,6 +143,9 @@ func (c *Engine) DeleteBucket(bucket string) error {
 	err := req.Do(c.ctx, nil)
 	if err != nil {
 		return err
+	}
+	if req.ResCode() == DevResCodeNoActive {
+		return ErrNoActive
 	}
 	if req.ResCode() != hbtp.ResStatusOk {
 		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
@@ -143,6 +167,9 @@ func (c *Engine) SetBucketParam(bucket, key string, data []byte) error {
 	if err != nil {
 		return err
 	}
+	if req.ResCode() == DevResCodeNoActive {
+		return ErrNoActive
+	}
 	if req.ResCode() != hbtp.ResStatusOk {
 		return fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
 	}
@@ -162,6 +189,9 @@ func (c *Engine) GetBucketParam(bucket, key string) ([]byte, error) {
 	err := req.Do(c.ctx, nil)
 	if err != nil {
 		return nil, err
+	}
+	if req.ResCode() == DevResCodeNoActive {
+		return nil, ErrNoActive
 	}
 	if req.ResCode() != hbtp.ResStatusOk {
 		return nil, fmt.Errorf("server err(%d):%s", req.ResCode(), string(req.ResBodyBytes()))
