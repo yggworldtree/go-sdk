@@ -66,5 +66,8 @@ func (c *Engine) recoverCallMapfn(res *hbtp.Context) (rt bool) {
 	} else {
 		res.ResString(hbtp.ResStatusNotFound, "Not Found Control Function")
 	}
+	if !res.Sended() {
+		res.ResString(hbtp.ResStatusErr, "Unknown")
+	}
 	return res.IsOwn()
 }
