@@ -127,9 +127,14 @@ func (c *Engine) close() {
 		c.conn = nil
 		c.regd = false
 	}
-	if c.lsr != nil {
-		c.lsr.OnDisconnect(c)
-	}
+	go func() {
+		if err := recover(); err != nil {
+			hbtp.Debugf("lsr.OnDisconnect recover:%+v", err)
+		}
+		if c.lsr != nil {
+			c.lsr.OnDisconnect(c)
+		}
+	}()
 }
 func (c *Engine) reg() error {
 	c.regd = false
@@ -193,9 +198,14 @@ func (c *Engine) run() (rterr error) {
 			time.Sleep(time.Second * 3)
 		} else {
 			hbtp.Debugf("register runner suceess!id:%s,alias:%s", c.info.Id, c.info.Alias)
-			if c.lsr != nil {
-				c.lsr.OnConnect(c)
-			}
+			go func() {
+				if err := recover(); err != nil {
+					hbtp.Debugf("lsr.OnConnect recover:%+v", err)
+				}
+				if c.lsr != nil {
+					c.lsr.OnConnect(c)
+				}
+			}()
 		}
 	} else if time.Since(c.htms).Seconds() > 10 {
 		c.htms = time.Now()
