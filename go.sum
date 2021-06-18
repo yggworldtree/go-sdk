@@ -15,3 +15,5 @@ github.com/yggworldtree/go-core v0.0.0-20210618024304-c534fc8e5e79 h1:vH8kUCZosP
 github.com/yggworldtree/go-core v0.0.0-20210618024304-c534fc8e5e79/go.mod h1:i6BUXV0vow2SYzr04qZJzGOSfSWAQtZunWFp72udCA0=
 github.com/yggworldtree/go-core v0.0.0-20210618043048-73c5cf09420d h1:rZW7T19nbv7Y7K3M3d+WPqS5orADScdebjFdAFXkMcI=
 github.com/yggworldtree/go-core v0.0.0-20210618043048-73c5cf09420d/go.mod h1:i6BUXV0vow2SYzr04qZJzGOSfSWAQtZunWFp72udCA0=
+github.com/yggworldtree/go-core v0.0.0-20210618052729-2f5aac86dd61 h1:fuiYXAgttPHpmV3Wm5nfRJ6YkSlGK92h7cyQMtQSDMg=
+github.com/yggworldtree/go-core v0.0.0-20210618052729-2f5aac86dd61/go.mod h1:i6BUXV0vow2SYzr04qZJzGOSfSWAQtZunWFp72udCA0=
