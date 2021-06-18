@@ -38,7 +38,7 @@ type Engine struct {
 	hbtpnotfn hbtp.ConnFun
 }
 
-func NewEngine(ctx context.Context, lsr IYWTListener, cfg *Config) *Engine {
+func NewEngine(lsr IYWTListener, cfg *Config) *Engine {
 	c := &Engine{
 		cfg:      cfg,
 		lsr:      lsr,
@@ -48,10 +48,7 @@ func NewEngine(ctx context.Context, lsr IYWTListener, cfg *Config) *Engine {
 		hbtpfns:  make(map[int32]hbtp.ConnFun),
 		hbtpconf: hbtp.MakeConfig(),
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	c.ctx, c.cncl = context.WithCancel(ctx)
+	c.ctx, c.cncl = context.WithCancel(context.Background())
 	return c
 }
 func (c *Engine) Id() string {
@@ -92,7 +89,7 @@ func (c *Engine) Run() error {
 	}
 
 	go func() {
-		for !utils.EndContext(c.ctx) {
+		for !hbtp.EndContext(c.ctx) {
 			if err := c.runRead(); err != nil {
 				hbtp.Debugf("Client runRead err(end):%v", err)
 				c.close()
@@ -100,19 +97,19 @@ func (c *Engine) Run() error {
 		}
 	}()
 	go func() {
-		for !utils.EndContext(c.ctx) {
+		for !hbtp.EndContext(c.ctx) {
 			c.runWrite()
 		}
 	}()
 	go func() {
-		for !utils.EndContext(c.ctx) {
+		for !hbtp.EndContext(c.ctx) {
 			err := c.runRecv()
 			if err != nil {
 				hbtp.Debugf("Engine runRecv err(end):%v", err)
 			}
 		}
 	}()
-	for !utils.EndContext(c.ctx) {
+	for !hbtp.EndContext(c.ctx) {
 		err := c.run()
 		if err != nil {
 			hbtp.Debugf("Engine run err(end):%v", err)

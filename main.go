@@ -13,7 +13,7 @@ var egn *ywtree.Engine
 func main() {
 	hbtp.Debug = true
 	println("this is test for sdk")
-	egn = ywtree.NewEngine(nil, &TmpLsr{}, &ywtree.Config{
+	egn = ywtree.NewEngine(&TmpLsr{}, &ywtree.Config{
 		Host:    "localhost:7000",
 		Org:     "mgr",
 		Name:    "test",
