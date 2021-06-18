@@ -146,6 +146,7 @@ func (c *Engine) reg() error {
 		Subs:    c.cfg.Subs,
 		MaxFreq: c.cfg.MaxFreq,
 		Sign:    c.cfg.Sign,
+		Secret:  c.cfg.Secret,
 	})
 	if err != nil {
 		return err

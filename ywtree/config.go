@@ -8,4 +8,5 @@ type Config struct {
 	Subs    string `json:"subs"`
 	MaxFreq string `json:"maxFreq"`
 	Sign    string `json:"sign"`
+	Secret  string `json:"secret"`
 }
