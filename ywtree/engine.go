@@ -238,7 +238,9 @@ func (c *Engine) runRead() error {
 		return nil
 	}
 
-	bts, err := hbtp.TcpRead(c.ctx, conn, 1)
+	bts := make([]byte, 1)
+	_, err := c.conn.Read(bts)
+	//bts, err := hbtp.TcpRead(c.ctx, conn, 1)
 	if err != nil {
 		return err
 	}
@@ -246,7 +248,8 @@ func (c *Engine) runRead() error {
 		hbtp.Debugf("Client runRead 0x8d what????")
 		return nil
 	}
-	bts, err = hbtp.TcpRead(c.ctx, conn, 1)
+	_, err = c.conn.Read(bts)
+	//bts, err = hbtp.TcpRead(c.ctx, conn, 1)
 	if err != nil {
 		return err
 	}
