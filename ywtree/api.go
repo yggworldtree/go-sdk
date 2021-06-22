@@ -3,9 +3,10 @@ package ywtree
 import (
 	"errors"
 	"fmt"
+	"net/url"
+
 	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
 	"github.com/yggworldtree/go-core/bean"
-	"net/url"
 )
 
 const (
@@ -14,7 +15,7 @@ const (
 
 var ErrNoActive = errors.New("no Active")
 
-func (c *Engine) SubTopic(pars []*bean.TopicInfo) error {
+func (c *Engine) SubTopic(pars ...*bean.TopicPath) error {
 	code, bts, err := c.doHbtpString("SubTopic", &bean.ClientSubTopic{
 		Topics: pars,
 	})
@@ -30,7 +31,7 @@ func (c *Engine) SubTopic(pars []*bean.TopicInfo) error {
 	//hbtp.Debugf("Engine subs code:%d,err:%v,conts:%s", code, err, bts)
 	return nil
 }
-func (c *Engine) UnSubTopic(pars []*bean.TopicPath) error {
+func (c *Engine) UnSubTopic(pars ...*bean.TopicPath) error {
 	if pars == nil || len(pars) <= 0 {
 		return errors.New("param err")
 	}

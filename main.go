@@ -1,11 +1,12 @@
 package main
 
 import (
+	"time"
+
 	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
 	"github.com/yggworldtree/go-core/bean"
 	"github.com/yggworldtree/go-core/messages"
 	"github.com/yggworldtree/go-sdk/ywtree"
-	"time"
 )
 
 var egn *ywtree.Engine
@@ -14,11 +15,11 @@ func main() {
 	hbtp.Debug = true
 	println("this is test for sdk")
 	egn = ywtree.NewEngine(&TmpLsr{}, &ywtree.Config{
-		Host:    "localhost:7000",
-		Org:     "mgr",
-		Name:    "test",
-		Sign:    "123456",
-		MaxFreq: "1s",
+		Host:      "localhost:7000",
+		Org:       "mgr",
+		Name:      "test",
+		Sign:      "123456",
+		Frequency: "1s",
 	})
 	egn.RegHbtpFun(1, testFun)
 	err := egn.Run()
@@ -31,12 +32,7 @@ type TmpLsr struct{}
 
 func (c *TmpLsr) OnConnect(egn *ywtree.Engine) {
 	pthCpu := bean.NewTopicPath("mgr/test", "cpu_info")
-	egn.SubTopic([]*bean.TopicInfo{
-		{
-			Path:  pthCpu.String(),
-			Safed: false,
-		},
-	})
+	egn.SubTopic(pthCpu)
 	go func() {
 		ls, err := egn.GroupClients("mgr", "test")
 		if err != nil {

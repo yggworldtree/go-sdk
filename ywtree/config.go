@@ -1,12 +1,15 @@
 package ywtree
 
+import "github.com/yggworldtree/go-core/bean"
+
 type Config struct {
-	Host    string `json:"host"`
-	Org     string `json:"org"`
-	Name    string `json:"name"`
-	Alias   string `json:"alias"`
-	Subs    string `json:"subs"`
-	MaxFreq string `json:"maxFreq"`
-	Sign    string `json:"sign"`
-	Secret  string `json:"secret"`
+	Host      string `json:"host"`
+	Secret    string `json:"secret"`
+	Org       string `json:"org"`
+	Name      string `json:"name"`
+	Alias     string `json:"alias"`
+	Frequency string `json:"frequency"`
+	Subs      []bean.TopicSubInfo
+	Pushs     []bean.TopicPushInfo
+	Sign      string `json:"sign"`
 }

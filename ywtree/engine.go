@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
-	"github.com/yggworldtree/go-core/bean"
-	"github.com/yggworldtree/go-core/messages"
-	"github.com/yggworldtree/go-core/utils"
 	"net"
 	"net/url"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	hbtp "github.com/mgr9525/HyperByte-Transfer-Protocol"
+	"github.com/yggworldtree/go-core/bean"
+	"github.com/yggworldtree/go-core/messages"
+	"github.com/yggworldtree/go-core/utils"
 )
 
 type Engine struct {
@@ -144,14 +145,15 @@ func (c *Engine) reg() error {
 		c.info.Alias = c.cfg.Alias
 	}
 	err := req.Do(c.ctx, &bean.ClientRegInfo{
-		Id:      c.info.Id,
-		Org:     c.cfg.Org,
-		Name:    c.cfg.Name,
-		Alias:   c.info.Alias,
-		Subs:    c.cfg.Subs,
-		MaxFreq: c.cfg.MaxFreq,
-		Sign:    c.cfg.Sign,
-		Secret:  c.cfg.Secret,
+		Id:        c.info.Id,
+		Secret:    c.cfg.Secret,
+		Org:       c.cfg.Org,
+		Name:      c.cfg.Name,
+		Alias:     c.info.Alias,
+		Frequency: c.cfg.Frequency,
+		Subs:      c.cfg.Subs,
+		Pushs:     c.cfg.Pushs,
+		Sign:      c.cfg.Sign,
 	})
 	if err != nil {
 		return err
