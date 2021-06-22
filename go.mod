@@ -7,4 +7,4 @@ require (
 	github.com/yggworldtree/go-core v0.0.0-20210621070134-be038d4e6f72
 )
 
-//replace github.com/yggworldtree/go-core => ../go-core
+replace github.com/yggworldtree/go-core => ../go-core
